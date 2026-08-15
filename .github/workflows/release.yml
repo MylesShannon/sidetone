@@ -1,0 +1,149 @@
+name: Release
+
+# Pushing a v* tag publishes that version: signed universal build, DMG attached to
+# a GitHub release, and a re-signed appcast committed to main so Pages serves it.
+#
+# Needs three secrets, all on the "release" environment rather than the repository,
+# so an approval gate stands between a push and the signing keys:
+#   SPARKLE_PRIVATE_KEY     the EdDSA private key that authorises updates
+#   SIGNING_CERT_P12        base64 of the code signing identity as a .p12
+#   SIGNING_CERT_PASSWORD   the password for that .p12
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    environment: release
+    # A job that waits on a prompt nobody can answer would otherwise sit for hours.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag must match VERSION
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          declared="$(cat VERSION)"
+          if [[ "$tag" != "$declared" ]]; then
+            echo "tag $GITHUB_REF_NAME does not match VERSION $declared" >&2
+            exit 1
+          fi
+
+      - name: Import the signing identity
+        env:
+          CERT_P12: ${{ secrets.SIGNING_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/release.keychain-db"
+          password="$(uuidgen)"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 900 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+
+          printf '%s' "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/identity.p12"
+          security import "$RUNNER_TEMP/identity.p12" -k "$keychain" \
+            -P "$CERT_PASSWORD" -T /usr/bin/codesign
+
+          rm -f "$RUNNER_TEMP/identity.p12"
+
+          # No trust settings here. 'security add-trusted-cert' waits for an
+          # authorisation prompt that no runner can answer, and it hangs the job.
+          # Signing does not need the certificate to be trusted, only present, and
+          # the identity lookup below no longer filters on validity.
+
+          # Without this codesign stops to ask for permission, which no runner can answer.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain"
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+
+          # find-identity applies the codesigning policy, which an untrusted
+          # self-signed certificate fails, so it reports none even after a successful
+          # import. The certificate itself is findable by name, and codesign accepts a
+          # certificate hash directly, which skips policy evaluation entirely.
+          echo "certificate in the imported keychain:"
+          security find-certificate -c "Sidetone Local" -Z "$keychain" \
+            | grep -E 'SHA-1 hash|"labl"' || true
+
+          identity="$(security find-certificate -c "Sidetone Local" -Z "$keychain" \
+            | awk '/SHA-1 hash:/ { print $3; exit }')"
+          if [[ -z "$identity" ]]; then
+            echo "no 'Sidetone Local' certificate in the imported keychain" >&2
+            exit 1
+          fi
+          echo "signing with certificate $identity"
+          # codesign searches the default keychain and whatever it is handed. Give it
+          # both, since a name alone does not reach a throwaway keychain.
+          security default-keychain -s "$keychain"
+
+          echo "SIDETONE_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+          echo "SIDETONE_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+          echo "RELEASE_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
+      - name: Stage the Sparkle key
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          key="$RUNNER_TEMP/sparkle_ed_key"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > "$key"
+          chmod 600 "$key"
+          echo "SIDETONE_ED_KEY_FILE=$key" >> "$GITHUB_ENV"
+
+      - name: Build, sign, package, and sign the appcast
+        run: make dmg
+
+      - name: Verify what is about to ship
+        run: |
+          codesign --verify --strict --verbose=2 .dist/Sidetone.app
+          lipo -archs .dist/Sidetone.app/Contents/MacOS/Sidetone | tee /dev/stderr | grep -q x86_64
+          # The appcast has to describe the exact bytes being uploaded.
+          declared="$(sed -n 's/.*length="\([0-9]*\)".*/\1/p' docs/appcast.xml | tail -1)"
+          actual="$(stat -f %z .dist/Sidetone-*.dmg)"
+          if [[ "$declared" != "$actual" ]]; then
+            echo "appcast says $declared bytes, DMG is $actual" >&2
+            exit 1
+          fi
+
+      - name: Publish the appcast to main
+        run: |
+          cp docs/appcast.xml "$RUNNER_TEMP/appcast.xml"
+          git fetch origin main
+          git checkout -B main origin/main
+          cp "$RUNNER_TEMP/appcast.xml" docs/appcast.xml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/appcast.xml
+          if git diff --cached --quiet; then
+            echo "appcast unchanged"
+          else
+            git commit -m "chore: appcast for $GITHUB_REF_NAME"
+            git push origin main
+          fi
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" .dist/Sidetone-*.dmg \
+            --title "Sidetone ${GITHUB_REF_NAME#v}" \
+            --generate-notes
+
+          # Anyone downloading the DMG meets Gatekeeper before they meet the app, so the
+          # way past it goes above the generated notes.
+          gh release edit "$GITHUB_REF_NAME" --notes "$(cat .github/release-preamble.md)
+
+          $(gh release view "$GITHUB_REF_NAME" --json body -q .body)"
+
+      - name: Remove the keys from the runner
+        if: always()
+        run: |
+          security delete-keychain "${RELEASE_KEYCHAIN:-$RUNNER_TEMP/release.keychain-db}" || true
+          rm -f "$RUNNER_TEMP/sparkle_ed_key"

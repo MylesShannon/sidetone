@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: swift --version
+
+      - name: Checks
+        run: make test
+
+      - name: Universal build
+        # No signing key here, so the appcast is skipped: this DMG is for trying a
+        # build, not for release. Releases are built and signed locally.
+        run: SIDETONE_SKIP_APPCAST=1 make dmg
+
+      - name: Confirm both architectures
+        run: lipo -archs .dist/Sidetone.app/Contents/MacOS/Sidetone | tee /dev/stderr | grep -q x86_64
+
+      - name: Upload the build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sidetone-${{ github.sha }}
+          path: .dist/Sidetone-*.dmg
+          retention-days: 30

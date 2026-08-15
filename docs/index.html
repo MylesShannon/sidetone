@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sidetone</title>
+<meta name="description" content="Hear your own mic through your headphones, from the macOS menu bar.">
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+	:root { color-scheme: light dark; }
+	body {
+		margin: 0 auto;
+		padding: 4rem 1.5rem;
+		max-width: 34rem;
+		font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+		text-align: center;
+	}
+	img { width: 128px; height: 128px; }
+	h1 { margin: 1rem 0 0.25rem; font-size: 2rem; }
+	p.tagline { margin: 0 0 2rem; opacity: 0.7; }
+	p { text-align: left; }
+	nav { margin: 2rem 0; display: flex; gap: 1.25rem; justify-content: center; flex-wrap: wrap; }
+	footer { margin-top: 3rem; font-size: 0.85rem; opacity: 0.6; }
+</style>
+</head>
+<body>
+	<img src="icon.png" alt="Sidetone">
+	<h1>Sidetone</h1>
+	<p class="tagline">Hear your own mic through your headphones, from the macOS menu bar.</p>
+
+	<p>
+		Sidetone sends any input to whatever output you pick. Usually that means hearing your own
+		microphone while you talk, but a line-in works just as well.
+	</p>
+	<p>
+		Capture and playback run on independent clocks, joined by a ring buffer that corrects for
+		drift, so a USB mic into Bluetooth headphones keeps working instead of slowly falling apart.
+	</p>
+
+	<nav>
+		<a href="https://github.com/MylesShannon/sidetone">Source</a>
+		<a href="https://github.com/MylesShannon/sidetone/releases/latest">Download</a>
+		<a href="https://github.com/MylesShannon/sidetone/blob/main/docs/architecture.md">How it works</a>
+	</nav>
+
+	<p>
+		Sidetone isn't notarized, so macOS blocks it the first time you open it. Click Done on the
+		warning rather than Move to Trash, then open System Settings, go to Privacy &amp; Security,
+		and click "Open Anyway".
+		<a href="https://github.com/MylesShannon/sidetone#if-you-downloaded-the-dmg">The longer
+		version.</a>
+	</p>
+
+	<footer>
+		MIT licensed. A personal project, not connected to any employer.
+	</footer>
+</body>
+</html>

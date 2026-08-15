@@ -1,0 +1,13 @@
+Sidetone
+Copyright (c) 2026 Myles Shannon
+
+This is a personal project. It is not a product of, sponsored by, endorsed by, or
+affiliated with any employer of the author, and it is not sold or commercialised.
+
+The source is original work built against Apple's public CoreAudio, AVFoundation,
+and SwiftUI frameworks. It contains no confidential or proprietary material
+belonging to any employer, and no third party artwork.
+
+Contributions are accepted under the MIT license in LICENSE. By opening a pull
+request you agree that your contribution may be distributed under those terms, and
+that you have the right to contribute it.

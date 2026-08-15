@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>Sidetone</string>
+	<key>CFBundleDisplayName</key>
+	<string>Sidetone</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.mshannon.sidetone</string>
+	<key>CFBundleExecutable</key>
+	<string>Sidetone</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>__VERSION__</string>
+	<key>CFBundleVersion</key>
+	<string>__VERSION__</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>15.0</string>
+	<key>SUFeedURL</key>
+	<string>https://mylesshannon.github.io/sidetone/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>hsiVxCwQYxCNESwt3XT296vJwGl+Qavc1Eik2g95PTM=</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Sidetone plays your microphone through the output device you choose so you can hear yourself.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Myles Shannon. MIT licensed.</string>
+</dict>
+</plist>
