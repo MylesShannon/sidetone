@@ -11,6 +11,10 @@ public final class CaptureProcessor: @unchecked Sendable {
 	public let analysisRing: RingBuffer
 
 	public let targetGain = AtomicFloat(1)
+	public let lowCut = Atomic<Bool>(false)
+	public let lowCutHertz = AtomicFloat(Float(ToneStage.defaultCutFrequency))
+	public let bassDecibels = AtomicFloat(0)
+	public let trebleDecibels = AtomicFloat(0)
 	public let limiterEnabled = Atomic<Bool>(true)
 	public let limiterReduction = AtomicFloat(0)
 	public let clipCount = Atomic<Int>(0)
@@ -20,6 +24,7 @@ public final class CaptureProcessor: @unchecked Sendable {
 	private let scratch: UnsafeMutablePointer<Float>
 	private let mono: UnsafeMutablePointer<Float>
 	private var gain = GainStage()
+	private var tone = ToneStage()
 	private var limiter = SafetyLimiter()
 	private let meter = LevelMeter()
 
@@ -42,6 +47,7 @@ public final class CaptureProcessor: @unchecked Sendable {
 
 		targetGain.value = initialGain
 		gain.prepare(sampleRate: sampleRate, startingAt: initialGain)
+		tone.prepare(sampleRate: sampleRate)
 		limiter.prepare(sampleRate: sampleRate)
 	}
 
@@ -67,6 +73,17 @@ public final class CaptureProcessor: @unchecked Sendable {
 		}
 
 		gain.process(scratch, frames: frames, channels: channels, target: targetGain.value)
+
+		// Before the limiter, so a treble lift cannot push the signal past the ceiling.
+		tone.process(
+			scratch,
+			frames: frames,
+			channels: channels,
+			lowCut: lowCut.load(ordering: .relaxed),
+			cutHertz: Double(lowCutHertz.value),
+			bassDecibels: Double(bassDecibels.value),
+			trebleDecibels: Double(trebleDecibels.value)
+		)
 
 		if limiterEnabled.load(ordering: .relaxed) {
 			limiter.process(scratch, frames: frames, channels: channels)

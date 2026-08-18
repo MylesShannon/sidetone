@@ -15,7 +15,12 @@ public struct SettingsData: Codable, Equatable, Sendable {
 	public var muted: Bool = false
 	public var latency: LatencyProfile = .auto
 	public var startMonitoringOnLaunch: Bool = false
+	public var startWhenDevicesAppear: Bool = false
 	public var safetyLimiter: Bool = true
+	public var lowCut: Bool = false
+	public var lowCutHertz: Double = ToneStage.defaultCutFrequency
+	public var bassDecibels: Double = 0
+	public var trebleDecibels: Double = 0
 	public var feedbackGuard: Bool = true
 	public var toggleHotKey: KeyCombo? = .defaultToggle
 	public var pushToMuteHotKey: KeyCombo?
@@ -33,9 +38,16 @@ public struct SettingsData: Codable, Equatable, Sendable {
 		gainDecibels = try container.decodeIfPresent(Double.self, forKey: .gainDecibels) ?? defaults.gainDecibels
 		muted = try container.decodeIfPresent(Bool.self, forKey: .muted) ?? defaults.muted
 		latency = try container.decodeIfPresent(LatencyProfile.self, forKey: .latency) ?? defaults.latency
+		startWhenDevicesAppear = try container.decodeIfPresent(Bool.self, forKey: .startWhenDevicesAppear)
+			?? defaults.startWhenDevicesAppear
 		startMonitoringOnLaunch = try container.decodeIfPresent(Bool.self, forKey: .startMonitoringOnLaunch)
 			?? defaults.startMonitoringOnLaunch
 		safetyLimiter = try container.decodeIfPresent(Bool.self, forKey: .safetyLimiter) ?? defaults.safetyLimiter
+		lowCut = try container.decodeIfPresent(Bool.self, forKey: .lowCut) ?? defaults.lowCut
+		lowCutHertz = try container.decodeIfPresent(Double.self, forKey: .lowCutHertz) ?? defaults.lowCutHertz
+		bassDecibels = try container.decodeIfPresent(Double.self, forKey: .bassDecibels) ?? defaults.bassDecibels
+		trebleDecibels = try container.decodeIfPresent(Double.self, forKey: .trebleDecibels)
+			?? defaults.trebleDecibels
 		feedbackGuard = try container.decodeIfPresent(Bool.self, forKey: .feedbackGuard) ?? defaults.feedbackGuard
 		toggleHotKey = try container.decodeIfPresent(KeyCombo.self, forKey: .toggleHotKey)
 		pushToMuteHotKey = try container.decodeIfPresent(KeyCombo.self, forKey: .pushToMuteHotKey)

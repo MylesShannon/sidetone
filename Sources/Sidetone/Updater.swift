@@ -27,6 +27,19 @@ final class Updater {
 
 	var canCheck: Bool { controller.updater.canCheckForUpdates }
 
+	/// Sparkle's own schedule is a day long and counted from its last check, so a copy
+	/// that has been closed for a month can sit on an old version for another day after
+	/// it opens. This asks once, a few seconds after launch, late enough to stay out of
+	/// the way of starting up. Nothing appears unless there is a newer version.
+	func checkQuietlyAtLaunch() {
+		guard checksAutomatically else { return }
+		Task { @MainActor in
+			try? await Task.sleep(for: .seconds(5))
+			guard canCheck else { return }
+			controller.updater.checkForUpdatesInBackground()
+		}
+	}
+
 	/// Shows progress and any "you are up to date" result, so it is only for a
 	/// check the user asked for.
 	func checkNow() {

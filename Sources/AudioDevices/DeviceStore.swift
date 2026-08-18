@@ -34,8 +34,33 @@ public final class DeviceStore {
 		return devices.first { $0.uid == uid }
 	}
 
-	public func defaultInput() -> AudioDevice? { device(uid: defaultInputUID) }
-	public func defaultOutput() -> AudioDevice? { device(uid: defaultOutputUID) }
+	/// Asked afresh rather than served from the cached UID above.
+	///
+	/// A cached answer outlives the device it names. The HAL occasionally fails this
+	/// question for a moment, and whatever is recorded then, nil or a device on its way
+	/// out, is never corrected: a cache that is merely wrong provokes no notification.
+	/// The cached value stays as a fallback for the moments the question fails.
+	public func defaultInput() -> AudioDevice? {
+		if let named = device(uid: source.defaultDeviceUID(input: true) ?? defaultInputUID) {
+			return named
+		}
+		return fallback(inputs)
+	}
+
+	public func defaultOutput() -> AudioDevice? {
+		if let named = device(uid: source.defaultDeviceUID(input: false) ?? defaultOutputUID) {
+			return named
+		}
+		return fallback(outputs)
+	}
+
+	/// CoreAudio occasionally refuses to name a default device for the whole life of a
+	/// process, answering nothing however often it is asked, while another process on
+	/// the same Mac is told immediately. Following the system default is still better
+	/// served by the built-in device than by refusing to start at all.
+	private func fallback(_ candidates: [AudioDevice]) -> AudioDevice? {
+		candidates.first { $0.transport == .builtIn } ?? candidates.first
+	}
 
 	/// Reports a change only when there is one. Starting to monitor a default device
 	/// makes the HAL build its own private aggregate around it, and that posts a
@@ -45,8 +70,14 @@ public final class DeviceStore {
 	public func refresh() {
 		let updated = source.allDevices()
 			.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-		let input = source.defaultDeviceUID(input: true)
-		let output = source.defaultDeviceUID(input: false)
+
+		// The HAL sometimes answers the device list and then fails the default device
+		// question in the same breath, and a nil recorded here would stick: a cache
+		// that is merely wrong provokes no notification to correct it. Keeping the last
+		// answer is safe, because a device that has actually gone stops resolving
+		// anyway.
+		let input = source.defaultDeviceUID(input: true) ?? defaultInputUID
+		let output = source.defaultDeviceUID(input: false) ?? defaultOutputUID
 
 		let moved = updated != devices || input != defaultInputUID || output != defaultOutputUID
 		devices = updated
@@ -66,6 +97,11 @@ public final class DeviceStore {
 		] {
 			observe(HAL.address(selector))
 		}
+
+		// The first refresh runs in `init`, early enough in a launch that the HAL
+		// sometimes has no default device to report yet. Nothing would correct that
+		// afterwards, because a cache that is merely wrong provokes no notification.
+		refresh()
 	}
 
 	public func stop() {

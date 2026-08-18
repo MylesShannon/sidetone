@@ -104,9 +104,16 @@ jobs:
         run: |
           codesign --verify --strict --verbose=2 .dist/Sidetone.app
           lipo -archs .dist/Sidetone.app/Contents/MacOS/Sidetone | tee /dev/stderr | grep -q x86_64
-          # The appcast has to describe the exact bytes being uploaded.
-          declared="$(sed -n 's/.*length="\([0-9]*\)".*/\1/p' docs/appcast.xml | tail -1)"
-          actual="$(stat -f %z .dist/Sidetone-*.dmg)"
+          # The appcast has to describe the exact bytes being uploaded. It lists every
+          # release, so the entry is found by filename: reading the last length in the
+          # file finds the oldest release instead of this one.
+          dmg="$(ls .dist/Sidetone-*.dmg)"
+          declared="$(sed -n "s|.*$(basename "$dmg")\" length=\"\([0-9]*\)\".*|\1|p" docs/appcast.xml)"
+          actual="$(stat -f %z "$dmg")"
+          if [[ -z "$declared" ]]; then
+            echo "appcast has no entry for $(basename "$dmg")" >&2
+            exit 1
+          fi
           if [[ "$declared" != "$actual" ]]; then
             echo "appcast says $declared bytes, DMG is $actual" >&2
             exit 1

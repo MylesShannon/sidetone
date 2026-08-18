@@ -476,12 +476,54 @@ Report.suite("Device change reporting") {
 	store.refresh()
 	Report.check(changes == 2, "and it coming back is another")
 
-	source.defaultInput = nil
+	let second = AudioDevice(
+		id: 12, uid: "built-in", name: "MacBook Pro Microphone", transport: .builtIn,
+		inputChannels: 2, outputChannels: 0, sampleRate: 48000
+	)
+	source.devices = [mic, second]
+	source.defaultInput = "built-in"
 	store.refresh()
 	Report.check(changes == 3, "so is the default input moving")
+	Report.check(store.defaultInputUID == "built-in", "and the new default is the one kept")
 
 	store.refresh()
 	Report.check(changes == 3, "but settling there is not")
+
+	// The HAL sometimes fails this one question while answering everything else. A nil
+	// recorded here would stick, because a wrong cache provokes no notification, and
+	// following the system default would resolve to nothing for the rest of the run.
+	source.defaultInput = nil
+	store.refresh()
+	Report.check(store.defaultInputUID == "built-in", "a failed lookup keeps the last good answer")
+	Report.check(changes == 3, "and reports no change, because nothing was learned")
+
+	// Resolution asks the system rather than trusting that record, or a default that
+	// moved while the question was failing would point at the wrong device for good.
+	source.defaultInput = "usb-mic"
+	Report.check(store.defaultInput()?.uid == "usb-mic", "the default resolves live, with no refresh")
+
+	source.defaultInput = nil
+	Report.check(
+		store.defaultInput()?.uid == "built-in",
+		"a failing lookup falls back to the last good answer"
+	)
+
+	// CoreAudio sometimes names no default at all for a whole process. Refusing to
+	// start is worse than picking the built-in device, which is what the machine would
+	// have fallen back to anyway.
+	source.defaultInput = "unplugged-thing"
+	Report.check(
+		store.defaultInput()?.uid == "built-in",
+		"a default naming something absent falls back to the built-in device"
+	)
+
+	source.devices = [mic]
+	store.refresh()
+	source.defaultInput = "unplugged-thing"
+	Report.check(
+		store.defaultInput()?.uid == "usb-mic",
+		"and to whatever is there when nothing is built in"
+	)
 }
 
 Report.suite("Snapshot boxes") {
@@ -707,6 +749,227 @@ Report.suite("KeyCombo") {
 	let encoded = try JSONEncoder().encode(combo)
 	let decoded = try JSONDecoder().decode(KeyCombo.self, from: encoded)
 	Report.check(decoded == combo, "shortcuts round trip through JSON")
+}
+
+Report.suite("Tone controls") {
+	let rate = 48000.0
+
+	/// Runs a sine through the stage and reports what came out, in dB relative to what
+	/// went in. Measured over the second half so the filter's own settling is past.
+	func response(
+		_ hertz: Double,
+		lowCut: Bool = false,
+		cutHertz: Double = ToneStage.defaultCutFrequency,
+		bass: Double = 0,
+		treble: Double = 0
+	) -> Double {
+		var stage = ToneStage()
+		stage.prepare(sampleRate: rate)
+
+		let frames = 24000
+		let buffer = UnsafeMutablePointer<Float>.allocate(capacity: frames)
+		defer { buffer.deallocate() }
+		for frame in 0 ..< frames {
+			buffer[frame] = Float(sin(2 * .pi * hertz * Double(frame) / rate))
+		}
+
+		stage.process(
+			buffer, frames: frames, channels: 1,
+			lowCut: lowCut, cutHertz: cutHertz, bassDecibels: bass, trebleDecibels: treble
+		)
+
+		let from = frames / 2
+		var sum = 0.0
+		for frame in from ..< frames {
+			sum += Double(buffer[frame]) * Double(buffer[frame])
+		}
+		let rms = (sum / Double(frames - from)).squareRoot()
+		// A full scale sine has an RMS of one over root two.
+		return Decibels.fromLinear(rms * 2.0.squareRoot())
+	}
+
+	Report.close(response(1000), 0, tolerance: 0.1, "flat settings leave the signal alone")
+
+	// Rumble, console fans and handling noise all live below the cut.
+	Report.check(response(30, lowCut: true) < -14, "the low cut takes out a 30 Hz rumble")
+	Report.check(response(30, lowCut: true) > -22, "and does it with a gentle slope, not a brick wall")
+	Report.check(response(1000, lowCut: true) > -0.2, "while leaving the voice range untouched")
+
+	// Where the cut sits is adjustable, so the tone has to follow it.
+	Report.check(response(150, lowCut: true, cutHertz: 20) > -0.5, "a cut down at 20 Hz leaves 150 Hz alone")
+	Report.check(response(150, lowCut: true, cutHertz: 200) < -6, "and one up at 200 Hz does not")
+	Report.check(
+		response(60, lowCut: true, cutHertz: 200) < response(60, lowCut: true, cutHertz: 40),
+		"moving the corner up takes more out of the bottom"
+	)
+
+	Report.close(response(40, bass: 6), 6, tolerance: 1.5, "bass lift reaches its setting low down")
+	// The shelf has to reach the part of the range people call bass, not just the part
+	// their speakers cannot reproduce.
+	Report.check(response(120, bass: 12) > 10, "and still has most of its lift at 120 Hz")
+	Report.close(response(5000, bass: 6), 0, tolerance: 0.5, "and does not touch the top end")
+	Report.close(response(40, bass: -12), -12, tolerance: 1.5, "bass cut works the same way")
+
+	Report.close(response(12000, treble: 6), 6, tolerance: 1.5, "treble lift reaches its setting up high")
+	Report.close(response(200, treble: 6), 0, tolerance: 0.5, "and does not touch the bottom end")
+
+	// A shelf above Nyquist has to be clamped, or the coefficients come out as
+	// nonsense and the filter screams instead of shelving.
+	var narrow = ToneStage()
+	narrow.prepare(sampleRate: 8000)
+	let sample = UnsafeMutablePointer<Float>.allocate(capacity: 64)
+	defer { sample.deallocate() }
+	for frame in 0 ..< 64 { sample[frame] = 0.5 }
+	narrow.process(
+		sample, frames: 64, channels: 1,
+		lowCut: true, cutHertz: 80, bassDecibels: 6, trebleDecibels: 12
+	)
+	Report.check((0 ..< 64).allSatisfy { sample[$0].isFinite }, "a corner above Nyquist stays finite")
+
+	var flat = ToneStage()
+	flat.prepare(sampleRate: rate)
+	Report.check(flat.isFlat, "a stage with nothing set knows it can be skipped")
+	flat.process(
+		sample, frames: 8, channels: 1,
+		lowCut: false, cutHertz: 80, bassDecibels: 3, trebleDecibels: 0
+	)
+	Report.check(!flat.isFlat, "and knows when it cannot")
+}
+
+Report.suite("Presets") {
+	let preset = Preset(
+		name: "Console",
+		input: DeviceRef(uid: "line-in", name: "Cubilux"),
+		output: DeviceRef(uid: "cans", name: "AirPods Max"),
+		channelMode: .stereo(left: 0, right: 1),
+		gainDecibels: 13.5,
+		latency: .auto,
+		lowCut: true,
+		lowCutHertz: 120,
+		bassDecibels: -3,
+		trebleDecibels: 4.5
+	)
+
+	let encoded = try JSONEncoder().encode(preset)
+	Report.check(try JSONDecoder().decode(Preset.self, from: encoded) == preset, "a preset round trips with its tone")
+
+	// A preset saved by the first release has none of the tone keys. Losing someone's
+	// presets to a decoding error is the one outcome that is not allowed.
+	let old = Data(#"{"id":"6E1B1E8C-0000-4000-8000-00000000ABCD","name":"Old","gainDecibels":6,"latency":"auto"}"#.utf8)
+	let migrated = try JSONDecoder().decode(Preset.self, from: old)
+	Report.check(migrated.name == "Old", "a preset from before tone still loads")
+	Report.check(migrated.gainDecibels == 6, "keeping what it did store")
+	Report.check(!migrated.lowCut, "and comes back with the low cut off")
+	Report.check(migrated.bassDecibels == 0 && migrated.trebleDecibels == 0, "and its tone flat")
+	Report.close(
+		migrated.lowCutHertz, ToneStage.defaultCutFrequency, tolerance: 0.001,
+		"and its cut at the default frequency"
+	)
+}
+
+Report.suite("Settings migration") {
+	// A settings file written by 1.0.0 has none of the tone or auto-start keys, and
+	// one missing key would otherwise throw away every setting in the file.
+	let old = Data(#"{"gainDecibels":6,"muted":false,"latency":"low","safetyLimiter":true}"#.utf8)
+	let migrated = try JSONDecoder().decode(SettingsData.self, from: old)
+	Report.check(migrated.gainDecibels == 6, "what it did store is kept")
+	Report.check(migrated.latency == .low, "including the latency profile")
+	Report.check(!migrated.lowCut, "the low cut comes back off")
+	Report.check(migrated.bassDecibels == 0 && migrated.trebleDecibels == 0, "and the tone flat")
+	Report.close(
+		migrated.lowCutHertz, ToneStage.defaultCutFrequency, tolerance: 0.001,
+		"with the cut at its default frequency"
+	)
+	Report.check(!migrated.startWhenDevicesAppear, "and starting on plug-in switched off")
+
+	var current = SettingsData()
+	current.lowCut = true
+	current.lowCutHertz = 120
+	current.bassDecibels = -4.5
+	current.trebleDecibels = 3
+	current.startWhenDevicesAppear = true
+	let round = try JSONDecoder().decode(SettingsData.self, from: JSONEncoder().encode(current))
+	Report.check(round == current, "and everything new survives a round trip")
+}
+
+Report.suite("Transport types") {
+	Report.check(TransportType(rawValue: kAudioDeviceTransportTypeUSB) == .usb, "USB is recognised")
+	Report.check(
+		TransportType(rawValue: kAudioDeviceTransportTypeBluetoothLE) == .bluetooth,
+		"low energy Bluetooth counts as Bluetooth"
+	)
+	Report.check(
+		TransportType(rawValue: kAudioDeviceTransportTypeContinuityCaptureWireless) == .network,
+		"an iPhone over Continuity counts as a network device"
+	)
+	Report.check(TransportType(rawValue: 0) == .unknown, "and anything unfamiliar is simply unknown")
+
+	// This is what decides how much headroom the automatic profile leaves, so a device
+	// landing in the wrong group means dropouts or needless latency.
+	Report.check(TransportType.bluetooth.needsExtraBuffering, "Bluetooth needs headroom")
+	Report.check(TransportType.airPlay.needsExtraBuffering, "so does AirPlay")
+	Report.check(TransportType.aggregate.needsExtraBuffering, "and an aggregate, whose clock is a fiction")
+	Report.check(!TransportType.usb.needsExtraBuffering, "while USB does not")
+	Report.check(!TransportType.builtIn.needsExtraBuffering, "nor the built-in device")
+	Report.check(TransportType.airPlay.isWireless, "AirPlay is wireless")
+	Report.check(!TransportType.thunderbolt.isWireless, "Thunderbolt is not")
+}
+
+Report.suite("Device latency") {
+	let latency = DeviceLatency(
+		deviceFrames: 100, safetyOffsetFrames: 33, streamFrames: 7, bufferFrames: 64, sampleRate: 48000
+	)
+	Report.check(latency.totalFrames == 204, "every stage counts towards the total")
+	Report.close(latency.milliseconds, 4.25, tolerance: 0.001, "and frames convert by the sample rate")
+
+	let halved = DeviceLatency(
+		deviceFrames: 100, safetyOffsetFrames: 33, streamFrames: 7, bufferFrames: 64, sampleRate: 96000
+	)
+	Report.check(halved.milliseconds < latency.milliseconds, "the same frames take less time at a higher rate")
+
+	let broken = DeviceLatency(
+		deviceFrames: 100, safetyOffsetFrames: 0, streamFrames: 0, bufferFrames: 0, sampleRate: 0
+	)
+	Report.check(broken.milliseconds == 0, "a device reporting no sample rate does not divide by zero")
+}
+
+Report.suite("Auto start") {
+	var rule = AutoStartRule()
+	Report.check(
+		!rule.shouldStart(enabled: true, present: false, running: false),
+		"there is nothing to start without the devices"
+	)
+	Report.check(
+		rule.shouldStart(enabled: true, present: true, running: false),
+		"the devices arriving starts monitoring"
+	)
+	Report.check(
+		!rule.shouldStart(enabled: true, present: true, running: true),
+		"sitting there plugged in does not start it again"
+	)
+	// The case that matters: switched off by hand, with the hardware still connected.
+	Report.check(
+		!rule.shouldStart(enabled: true, present: true, running: false),
+		"switching off by hand is left alone"
+	)
+
+	_ = rule.shouldStart(enabled: true, present: false, running: false)
+	Report.check(
+		rule.shouldStart(enabled: true, present: true, running: false),
+		"unplugging and plugging back in starts it again"
+	)
+
+	var disabled = AutoStartRule()
+	Report.check(
+		!disabled.shouldStart(enabled: false, present: true, running: false),
+		"and none of it happens when the setting is off"
+	)
+
+	var already = AutoStartRule(devicesPresent: true)
+	Report.check(
+		!already.shouldStart(enabled: true, present: true, running: false),
+		"hardware that was already there at launch is not an arrival"
+	)
 }
 
 Report.finish()

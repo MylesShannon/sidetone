@@ -190,7 +190,8 @@ struct MonitorPanel: View {
 				title: "Input",
 				systemImage: "mic",
 				devices: model.devices.inputs,
-				selection: model.selectedInput,
+				stored: model.settings.data.input,
+				resolved: model.selectedInput,
 				onSelect: model.select(input:)
 			)
 
@@ -202,7 +203,8 @@ struct MonitorPanel: View {
 				title: "Output",
 				systemImage: "headphones",
 				devices: model.devices.outputs,
-				selection: model.selectedOutput,
+				stored: model.settings.data.output,
+				resolved: model.selectedOutput,
 				onSelect: model.select(output:)
 			)
 
@@ -234,27 +236,52 @@ struct MonitorPanel: View {
 		title: String,
 		systemImage: String,
 		devices: [AudioDevice],
-		selection: AudioDevice?,
-		onSelect: @escaping (AudioDevice) -> Void
+		stored: DeviceRef?,
+		resolved: AudioDevice?,
+		onSelect: @escaping (AudioDevice?) -> Void
 	) -> some View {
-		// With nothing selected the list gets a placeholder of its own, because a popup
-		// always shows one of its items and would otherwise claim the first device.
-		let chosen = selection.flatMap { current in devices.firstIndex { $0.uid == current.uid } }
-		let titles = chosen == nil ? ["No device"] + devices.map(\.name) : devices.map(\.name)
-		let offset = chosen == nil ? 1 : 0
+		// Nothing stored means follow whatever macOS is using, so the first entry
+		// stands for that and says which device that currently is.
+		let followsDefault = stored == nil
+		let pinned = devices.firstIndex { $0.uid == stored?.uid }
+		let absent = followsDefault || pinned != nil ? nil : stored?.name
 
-		return HStack(spacing: Metrics.gap) {
+		var titles = [resolved.map { "System default (\($0.name))" } ?? "System default"]
+		if let absent { titles.append("\(absent) (not connected)") }
+		titles += devices.map(\.name)
+
+		// One entry for the default, and another for a pinned device that is not here.
+		let offset = absent == nil ? 1 : 2
+		let selected = followsDefault ? 0 : (pinned.map { $0 + offset } ?? 1)
+
+		return devicePickerRow(
+			title: title,
+			systemImage: systemImage,
+			titles: titles,
+			selected: selected
+		) { choice in
+			guard choice != 0 else { return onSelect(nil) }
+			let index = choice - offset
+			guard devices.indices.contains(index) else { return }
+			onSelect(devices[index])
+		}
+	}
+
+	private func devicePickerRow(
+		title: String,
+		systemImage: String,
+		titles: [String],
+		selected: Int,
+		onChoose: @escaping (Int) -> Void
+	) -> some View {
+		HStack(spacing: Metrics.gap) {
 			Label(title, systemImage: systemImage)
 				.labelStyle(.iconOnly)
 				.foregroundStyle(.secondary)
 				.frame(width: Metrics.icon)
 
-			PopUpButton(titles: titles, selection: chosen ?? 0, width: Metrics.control) { choice in
-				let index = choice - offset
-				guard devices.indices.contains(index) else { return }
-				onSelect(devices[index])
-			}
-			.accessibilityLabel("\(title) device")
+			PopUpButton(titles: titles, selection: selected, width: Metrics.control, onSelect: onChoose)
+				.accessibilityLabel("\(title) device")
 		}
 	}
 
@@ -310,6 +337,9 @@ struct MonitorPanel: View {
 	private var footer: some View {
 		HStack {
 			Button {
+				// Ordered out before the window opens, because the panel stays up
+				// otherwise and sits over whatever it just opened.
+				MenuBarPanel.dismiss()
 				openWindow(id: SidetoneWindow.settings)
 				NSApp.activate(ignoringOtherApps: true)
 			} label: {

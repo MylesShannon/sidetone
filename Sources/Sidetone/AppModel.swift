@@ -38,7 +38,10 @@ final class AppModel {
 	@ObservationIgnored private var pushToMuteHotKeyID: UInt32?
 	@ObservationIgnored private var pushToMuteWasMuted = false
 	@ObservationIgnored private var sleepObservers: [NSObjectProtocol] = []
+	@ObservationIgnored private var screenObserver: NSObjectProtocol?
+	@ObservationIgnored private var spaceObserver: NSObjectProtocol?
 	@ObservationIgnored private var wasRunningBeforeSleep = false
+	@ObservationIgnored private var autoStart = AutoStartRule()
 
 	var isRunning: Bool { engine.state == .running }
 
@@ -70,14 +73,15 @@ final class AppModel {
 		engine.onLatencyStepUpNeeded = { [weak self] in self?.stepUpLatency() }
 		registerHotKeys()
 		observeSleep()
+		observeDisplayChanges()
 		Self.askAboutNotifications()
 
 		if settings.data.startMonitoringOnLaunch {
 			start()
 		}
 
-		// Sparkle schedules its own background checks from here on.
-		_ = updater
+		// One quiet check now, and Sparkle's own daily schedule from here on.
+		updater.checkQuietlyAtLaunch()
 	}
 
 	// MARK: - Updates
@@ -93,6 +97,25 @@ final class AppModel {
 	/// stream left open across a sleep tends to come back dead, with the switch still
 	/// showing on. Stopping first and starting again afterwards is what keeps a
 	/// machine that sleeps all day usable.
+	/// Plugging in a display moves the menu bar, and SwiftUI leaves an open panel at
+	/// its old position, which macOS then constrains onto the new screen: it ends up
+	/// floating in the middle of it. Switching Space strands it in the same way.
+	/// Native menus close on both, so this one does too, and the next click puts the
+	/// panel back under the icon.
+	private func observeDisplayChanges() {
+		screenObserver = NotificationCenter.default.addObserver(
+			forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+		) { _ in
+			MainActor.assumeIsolated { MenuBarPanel.dismiss() }
+		}
+
+		spaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+			forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
+		) { _ in
+			MainActor.assumeIsolated { MenuBarPanel.dismiss() }
+		}
+	}
+
 	private func observeSleep() {
 		let center = NSWorkspace.shared.notificationCenter
 
@@ -141,7 +164,17 @@ final class AppModel {
 		for observer in sleepObservers {
 			NSWorkspace.shared.notificationCenter.removeObserver(observer)
 		}
+		if let spaceObserver {
+			NSWorkspace.shared.notificationCenter.removeObserver(spaceObserver)
+		}
+		spaceObserver = nil
 		sleepObservers.removeAll()
+		if let screenObserver {
+			// A different centre from the sleep notifications, so it needs removing
+			// from that one rather than the workspace's.
+			NotificationCenter.default.removeObserver(screenObserver)
+		}
+		screenObserver = nil
 		stopMeterTimer()
 		HotKeyCenter.shared.unregisterAll()
 		toggleHotKeyID = nil
@@ -165,12 +198,24 @@ final class AppModel {
 	/// or a resume after waking. Those are the ones worth a notification if they fail.
 	func start(automatic: Bool = false) {
 		guard !isRunning, !isStarting else { return }
+
+		// Nothing resolving usually means the cached list is stale rather than the
+		// hardware being absent, and no listener will fire to correct it while the
+		// hardware sits still. Cheap enough to look again before refusing to start.
+		if selectedInput == nil || selectedOutput == nil {
+			devices.refresh()
+		}
+
 		guard let input = selectedInput else {
 			statusMessage = "No input device available"
+			waitForHardware(automatic)
 			return
 		}
 		guard let output = selectedOutput else {
+			// Headphones disconnecting leaves macOS without a default for a moment, so
+			// this is a state to wait out rather than to give up on.
 			statusMessage = "No output device available"
+			waitForHardware(automatic)
 			return
 		}
 
@@ -185,6 +230,14 @@ final class AppModel {
 			microphoneDenied = false
 			launch(input: input, output: output, automatic: automatic)
 		}
+	}
+
+	/// Arms the hardware listener after a start that nobody asked for came up empty.
+	/// A start the user asked for is left alone: they are looking at the panel and can
+	/// see what it says.
+	private func waitForHardware(_ automatic: Bool) {
+		guard automatic else { return }
+		awaitingReconnect = true
 	}
 
 	func stop() {
@@ -204,13 +257,15 @@ final class AppModel {
 			latency: settings.data.latency,
 			gainDecibels: settings.data.gainDecibels,
 			muted: settings.data.muted,
-			safetyLimiter: settings.data.safetyLimiter
+			safetyLimiter: settings.data.safetyLimiter,
+			lowCut: settings.data.lowCut,
+			lowCutHertz: settings.data.lowCutHertz,
+			bassDecibels: settings.data.bassDecibels,
+			trebleDecibels: settings.data.trebleDecibels
 		)
 
 		do {
 			try engine.start(configuration, stepUps: latencyStepUps)
-			settings.data.input = input.ref
-			settings.data.output = output.ref
 			statusMessage = nil
 			awaitingReconnect = false
 			startMeterTimer()
@@ -224,13 +279,23 @@ final class AppModel {
 			// Hardware pulled mid-run usually fails the restart before the device list
 			// catches up, so this arrives as a failure rather than as a disconnect. It is
 			// the same outage, and it has to arm the listener that brings monitoring back.
-			// Already waiting means this is a retry, which nobody needs telling about
-			// twice.
 			guard automatic else { return }
-			if !awaitingReconnect {
-				Self.notify("Monitoring stopped", message)
-			}
+			let alreadyWaiting = awaitingReconnect
 			awaitingReconnect = true
+
+			Task { @MainActor in
+				// Long enough for the HAL to admit the device has gone, so the panel can
+				// say it was unplugged rather than that it would not start.
+				try? await Task.sleep(for: .milliseconds(300))
+				devices.refresh()
+				let text = disconnectedMessage() ?? message
+				statusMessage = text
+				// Already waiting means this is a retry, which nobody needs telling
+				// about twice.
+				if !alreadyWaiting {
+					Self.notify("Monitoring stopped", text)
+				}
+			}
 		}
 	}
 
@@ -280,19 +345,45 @@ final class AppModel {
 		restartIfRunning()
 	}
 
+	func setTone(
+		lowCut: Bool? = nil,
+		cutHertz: Double? = nil,
+		bass: Double? = nil,
+		treble: Double? = nil
+	) {
+		if let lowCut { settings.data.lowCut = lowCut }
+		if let cutHertz { settings.data.lowCutHertz = cutHertz }
+		if let bass { settings.data.bassDecibels = bass }
+		if let treble { settings.data.trebleDecibels = treble }
+		applyTone()
+	}
+
+	private func applyTone() {
+		engine.applyTone(
+			lowCut: settings.data.lowCut,
+			lowCutHertz: settings.data.lowCutHertz,
+			bassDecibels: settings.data.bassDecibels,
+			trebleDecibels: settings.data.trebleDecibels
+		)
+	}
+
 	func setSafetyLimiter(_ enabled: Bool) {
 		settings.data.safetyLimiter = enabled
 		engine.setSafetyLimiter(enabled)
 	}
 
-	func select(input device: AudioDevice) {
-		settings.data.input = device.ref
-		settings.data.channelMode = .default(availableChannels: device.inputChannels)
+	/// Nothing selected means follow whatever macOS is using, so putting headphones on
+	/// moves monitoring to them instead of leaving it on the last device chosen.
+	func select(input device: AudioDevice?) {
+		settings.data.input = device?.ref
+		// The channel choice belongs to a particular device, so it is handed back when
+		// no device is pinned.
+		settings.data.channelMode = device.map { .default(availableChannels: $0.inputChannels) }
 		restartIfRunning()
 	}
 
-	func select(output device: AudioDevice) {
-		settings.data.output = device.ref
+	func select(output device: AudioDevice?) {
+		settings.data.output = device?.ref
 		restartIfRunning()
 	}
 
@@ -310,15 +401,30 @@ final class AppModel {
 	// MARK: - Presets
 
 	func capturePreset(named name: String) {
-		let preset = Preset(
+		settings.data.presets.append(currentSettings(named: name))
+	}
+
+	/// Overwrites a preset with whatever is set now, keeping its name and its place in
+	/// the list, so a preset can be adjusted without deleting and retyping it.
+	func updatePreset(_ preset: Preset) {
+		guard let index = settings.data.presets.firstIndex(where: { $0.id == preset.id }) else { return }
+		settings.data.presets[index] = currentSettings(named: preset.name, id: preset.id)
+	}
+
+	private func currentSettings(named name: String, id: UUID = UUID()) -> Preset {
+		Preset(
+			id: id,
 			name: name,
 			input: settings.data.input,
 			output: settings.data.output,
 			channelMode: settings.data.channelMode,
 			gainDecibels: settings.data.gainDecibels,
-			latency: settings.data.latency
+			latency: settings.data.latency,
+			lowCut: settings.data.lowCut,
+			lowCutHertz: settings.data.lowCutHertz,
+			bassDecibels: settings.data.bassDecibels,
+			trebleDecibels: settings.data.trebleDecibels
 		)
-		settings.data.presets.append(preset)
 	}
 
 	func apply(_ preset: Preset) {
@@ -327,7 +433,14 @@ final class AppModel {
 		settings.data.channelMode = preset.channelMode
 		settings.data.gainDecibels = preset.gainDecibels
 		settings.data.latency = preset.latency
+		settings.data.lowCut = preset.lowCut
+		settings.data.lowCutHertz = preset.lowCutHertz
+		settings.data.bassDecibels = preset.bassDecibels
+		settings.data.trebleDecibels = preset.trebleDecibels
 		latencyStepUps = 0
+		// Tone reaches a running engine without a restart, and a restart would only
+		// interrupt the sound for no reason if the devices are unchanged.
+		applyTone()
 		restartIfRunning()
 	}
 
@@ -337,12 +450,35 @@ final class AppModel {
 
 	// MARK: - Hardware changes
 
+	/// Names a configured device that is no longer there, for the failures that are
+	/// really a disconnection. Nil when both are still present, which means the start
+	/// failed for some other reason and its own message is the honest one.
+	private func disconnectedMessage() -> String? {
+		let name: String? = if isMissing(settings.data.input, fallback: devices.defaultInput()) {
+			settings.data.input?.name ?? "The input"
+		} else if isMissing(settings.data.output, fallback: devices.defaultOutput()) {
+			settings.data.output?.name ?? "The output"
+		} else {
+			nil
+		}
+		guard let name else { return nil }
+		return "\(name) disconnected. Sidetone will start again when it comes back."
+	}
+
+	/// A pinned device is missing when its UID is gone. One that follows the system
+	/// default is missing only when macOS has no default left to offer, which happens
+	/// when the last device of that direction is unplugged.
+	private func isMissing(_ reference: DeviceRef?, fallback: AudioDevice?) -> Bool {
+		guard let reference else { return fallback == nil }
+		return devices.device(uid: reference.uid) == nil
+	}
+
 	/// Remembered devices are matched by UID, so a replug that hands out a new
 	/// CoreAudio ID still counts as the same hardware.
 	private func hardwareChanged() {
 		if isRunning {
-			let inputGone = devices.device(uid: settings.data.input?.uid) == nil
-			let outputGone = devices.device(uid: settings.data.output?.uid) == nil
+			let inputGone = isMissing(settings.data.input, fallback: devices.defaultInput())
+			let outputGone = isMissing(settings.data.output, fallback: devices.defaultOutput())
 			if inputGone || outputGone {
 				let missing = inputGone ? settings.data.input?.name : settings.data.output?.name
 				engine.stop()
@@ -361,10 +497,17 @@ final class AppModel {
 			return
 		}
 
-		guard awaitingReconnect,
-		      let input = devices.device(uid: settings.data.input?.uid),
-		      let output = devices.device(uid: settings.data.output?.uid)
-		else { return }
+		let present = selectedInput != nil && selectedOutput != nil
+		if autoStart.shouldStart(
+			enabled: settings.data.startWhenDevicesAppear, present: present, running: isRunning
+		) {
+			start(automatic: true)
+			return
+		}
+
+		// Resolved rather than looked up by UID, because a picker set to the system
+		// default has no UID to look up and would never match.
+		guard awaitingReconnect, let input = selectedInput, let output = selectedOutput else { return }
 
 		// Cleared on success inside `launch`, so a device that comes back still broken
 		// leaves the app waiting rather than giving up.

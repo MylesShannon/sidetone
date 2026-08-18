@@ -59,9 +59,13 @@ Sidetone will say so before you try it.
   in Settings, under Shortcuts.
 - Latency sits in the panel. Low is the tightest. Automatic picks for you, and
   loosens up on its own if your Mac can't keep up.
-- Save a pair of devices and their gain as a preset, under Settings, Presets.
+- Leave a picker on System default and Sidetone follows whatever macOS is using, so
+  putting headphones on moves monitoring to them.
+- Tone controls sit under Settings, Audio: a low cut for rumble, and bass and treble
+  either side of it.
+- Save a pair of devices, the gain and the tone as a preset, under Settings, Presets.
 - Unplug something and monitoring stops and tells you what went missing. Plug it
-  back in and it starts again.
+  back in and it starts again, and it can start on its own when your devices appear.
 - Any input works, not only microphones. See below.
 - Sidetone checks for new versions and offers to install them. It asks first, and
   you can turn the checking off in Settings.

@@ -11,6 +11,10 @@ public struct MonitorConfiguration: Sendable, Equatable {
 	public var gainDecibels: Double
 	public var muted: Bool
 	public var safetyLimiter: Bool
+	public var lowCut: Bool
+	public var lowCutHertz: Double
+	public var bassDecibels: Double
+	public var trebleDecibels: Double
 
 	public init(
 		input: AudioDevice,
@@ -19,7 +23,11 @@ public struct MonitorConfiguration: Sendable, Equatable {
 		latency: LatencyProfile,
 		gainDecibels: Double,
 		muted: Bool,
-		safetyLimiter: Bool
+		safetyLimiter: Bool,
+		lowCut: Bool = false,
+		lowCutHertz: Double = ToneStage.defaultCutFrequency,
+		bassDecibels: Double = 0,
+		trebleDecibels: Double = 0
 	) {
 		self.input = input
 		self.output = output
@@ -28,6 +36,10 @@ public struct MonitorConfiguration: Sendable, Equatable {
 		self.gainDecibels = gainDecibels
 		self.muted = muted
 		self.safetyLimiter = safetyLimiter
+		self.lowCut = lowCut
+		self.lowCutHertz = lowCutHertz
+		self.bassDecibels = bassDecibels
+		self.trebleDecibels = trebleDecibels
 	}
 }
 
@@ -83,6 +95,13 @@ public final class MonitorEngine {
 		processor?.limiterEnabled.store(enabled, ordering: .relaxed)
 	}
 
+	public func applyTone(lowCut: Bool, lowCutHertz: Double, bassDecibels: Double, trebleDecibels: Double) {
+		processor?.lowCut.store(lowCut, ordering: .relaxed)
+		processor?.lowCutHertz.value = Float(lowCutHertz)
+		processor?.bassDecibels.value = Float(bassDecibels)
+		processor?.trebleDecibels.value = Float(trebleDecibels)
+	}
+
 	public func start(_ configuration: MonitorConfiguration, stepUps: Int = 0) throws {
 		stop()
 		do {
@@ -123,6 +142,10 @@ public final class MonitorEngine {
 			initialGain: configuration.muted ? 0 : Float(Decibels.toLinear(configuration.gainDecibels))
 		)
 		processor.limiterEnabled.store(configuration.safetyLimiter, ordering: .relaxed)
+		processor.lowCut.store(configuration.lowCut, ordering: .relaxed)
+		processor.lowCutHertz.value = Float(configuration.lowCutHertz)
+		processor.bassDecibels.value = Float(configuration.bassDecibels)
+		processor.trebleDecibels.value = Float(configuration.trebleDecibels)
 		self.processor = processor
 
 		let engine = AVAudioEngine()

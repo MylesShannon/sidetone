@@ -55,6 +55,14 @@ private struct GeneralSettings: View {
 			))
 
 			Toggle(isOn: Binding(
+				get: { model.settings.data.startWhenDevicesAppear },
+				set: { model.settings.data.startWhenDevicesAppear = $0 }
+			)) {
+				Text("Start monitoring when your devices are plugged in")
+				Text("Switching monitoring off by hand is left alone until they come back again.")
+			}
+
+			Toggle(isOn: Binding(
 				get: { model.settings.data.checkForUpdates },
 				set: { model.setChecksForUpdates($0) }
 			)) {
@@ -85,6 +93,17 @@ private struct AudioSettings: View {
 
 	var body: some View {
 		Form {
+			LabeledContent("Measured") {
+				VStack(alignment: .leading, spacing: 2) {
+					Text(model.latencyDescription)
+					if model.isRunning {
+						Text("\(model.snapshot.underruns) dropouts, \(model.snapshot.overruns) overruns")
+							.font(.caption)
+							.foregroundStyle(.secondary)
+					}
+				}
+			}
+
 			Picker(selection: Binding(
 				get: { model.settings.data.latency },
 				set: { model.setLatency($0) }
@@ -110,18 +129,71 @@ private struct AudioSettings: View {
 				set: { model.settings.data.feedbackGuard = $0 }
 			))
 
-			LabeledContent("Measured") {
-				VStack(alignment: .leading, spacing: 2) {
-					Text(model.latencyDescription)
-					if model.isRunning {
-						Text("\(model.snapshot.underruns) dropouts, \(model.snapshot.overruns) overruns")
-							.font(.caption)
+			Section("Tone") {
+				Toggle(isOn: Binding(
+					get: { model.settings.data.lowCut },
+					set: { model.setTone(lowCut: $0) }
+				)) {
+					Text("Low cut")
+					Text("Rolls off the rumble and fan noise below where you set it.")
+				}
+
+				LabeledContent("Cut below") {
+					HStack(spacing: 8) {
+						Slider(
+							value: Binding(
+								get: { model.settings.data.lowCutHertz },
+								set: { model.setTone(cutHertz: $0) }
+							),
+							in: ToneStage.cutRange,
+							step: 5
+						)
+						Text("\(Int(model.settings.data.lowCutHertz)) Hz")
+							.font(.caption.monospacedDigit())
 							.foregroundStyle(.secondary)
+							.frame(width: 58, alignment: .trailing)
+						Button("Reset") { model.setTone(cutHertz: ToneStage.defaultCutFrequency) }
+							.buttonStyle(.accessoryBar)
+							.disabled(model.settings.data.lowCutHertz == ToneStage.defaultCutFrequency)
 					}
 				}
+				.disabled(!model.settings.data.lowCut)
+
+				toneSlider(
+					"Bass",
+					value: Binding(
+						get: { model.settings.data.bassDecibels },
+						set: { model.setTone(bass: $0) }
+					)
+				)
+
+				toneSlider(
+					"Treble",
+					value: Binding(
+						get: { model.settings.data.trebleDecibels },
+						set: { model.setTone(treble: $0) }
+					)
+				)
 			}
 		}
 		.formStyle(.grouped)
+	}
+
+	/// The value sits beside each control, because a shelf set by feel still wants a
+	/// number you can write down and come back to.
+	private func toneSlider(_ title: String, value: Binding<Double>) -> some View {
+		LabeledContent(title) {
+			HStack(spacing: 8) {
+				Slider(value: value, in: -ToneStage.range ... ToneStage.range, step: 0.5)
+				Text(Decibels.format(value.wrappedValue))
+					.font(.caption.monospacedDigit())
+					.foregroundStyle(.secondary)
+					.frame(width: 58, alignment: .trailing)
+				Button("Reset") { value.wrappedValue = 0 }
+					.buttonStyle(.accessoryBar)
+					.disabled(value.wrappedValue == 0)
+			}
+		}
 	}
 }
 
@@ -144,6 +216,8 @@ private struct PresetSettings: View {
 						}
 						Spacer()
 						Button("Use") { model.apply(preset) }
+						Button("Update") { model.updatePreset(preset) }
+							.help("Replace this preset with the current devices, gain and tone")
 						Button(role: .destructive) {
 							model.removePreset(preset)
 						} label: {
@@ -166,16 +240,34 @@ private struct PresetSettings: View {
 				TextField("Preset name", text: $newName)
 					.onSubmit(save)
 				Button("Save current", action: save)
-					.disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty)
+					.disabled(trimmedName.isEmpty || isTaken)
+			}
+
+			if isTaken {
+				Text("There is already a preset called \(trimmedName). Use Update on that row to change it.")
+					.font(.caption)
+					.foregroundStyle(.secondary)
 			}
 		}
 		.padding()
 	}
 
+	private var trimmedName: String {
+		newName.trimmingCharacters(in: .whitespaces)
+	}
+
+	/// Compared without case, because two presets differing only in capitals are two
+	/// presets nobody can tell apart in the menu bar.
+	private var isTaken: Bool {
+		model.settings.data.presets.contains {
+			$0.name.caseInsensitiveCompare(trimmedName) == .orderedSame
+		}
+	}
+
 	private func save() {
-		let name = newName.trimmingCharacters(in: .whitespaces)
-		guard !name.isEmpty else { return }
-		model.capturePreset(named: name)
+		// Also guarded here, because the field saves on Return as well as on the button.
+		guard !trimmedName.isEmpty, !isTaken else { return }
+		model.capturePreset(named: trimmedName)
 		newName = ""
 	}
 
