@@ -2,8 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
+
+# Only the newest build of a branch is worth having, so a push replaces the one
+# already running rather than queueing behind it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
@@ -18,6 +24,45 @@ jobs:
       - name: Checks
         run: make test
 
+      # An ad-hoc signature makes every build a different app to macOS, which costs
+      # the microphone permission and the login item each time one is installed. The
+      # same certificate the releases use keeps them all the same app.
+      #
+      # The key is absent for pull requests from forks, which GitHub withholds
+      # secrets from, so the build carries on unsigned rather than failing.
+      - name: Import the signing identity
+        env:
+          CERT_P12: ${{ secrets.SIGNING_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+        run: |
+          if [[ -z "$CERT_P12" ]]; then
+            echo "no signing key here, so this build will be ad-hoc signed"
+            exit 0
+          fi
+
+          keychain="$RUNNER_TEMP/ci.keychain-db"
+          password="$(uuidgen)"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 900 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+
+          printf '%s' "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/identity.p12"
+          security import "$RUNNER_TEMP/identity.p12" -k "$keychain" \
+            -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/identity.p12"
+
+          # Without this codesign stops to ask for permission, which no runner can answer.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain"
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+
+          # By hash, because an untrusted self-signed certificate fails the codesigning
+          # policy that find-identity applies, and codesign takes a hash directly.
+          identity="$(security find-certificate -c "Sidetone Local" -Z "$keychain" \
+            | awk '/SHA-1 hash:/ { print $3; exit }')"
+          echo "SIDETONE_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+          echo "SIDETONE_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+          echo "CI_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
       - name: Universal build
         # No signing key here, so the appcast is skipped: this DMG is for trying a
         # build, not for release. Releases are built and signed locally.
@@ -26,9 +71,21 @@ jobs:
       - name: Confirm both architectures
         run: lipo -archs .dist/Sidetone.app/Contents/MacOS/Sidetone | tee /dev/stderr | grep -q x86_64
 
+      # Named for the branch as well as the commit, because a list of artifacts
+      # identified only by hash tells you nothing about which one you wanted.
+      - name: Name the build
+        id: name
+        run: |
+          branch="${{ github.head_ref || github.ref_name }}"
+          echo "artifact=Sidetone-${branch//\//-}-${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+
       - name: Upload the build
         uses: actions/upload-artifact@v4
         with:
-          name: Sidetone-${{ github.sha }}
+          name: ${{ steps.name.outputs.artifact }}
           path: .dist/Sidetone-*.dmg
           retention-days: 30
+
+      - name: Remove the key from the runner
+        if: always()
+        run: security delete-keychain "${CI_KEYCHAIN:-$RUNNER_TEMP/ci.keychain-db}" || true

@@ -35,6 +35,13 @@ stable identity the new version can arrive unrecognised: microphone prompt again
 login item silently broken. Use the same certificate for every release, and back it
 up, because losing it resets those permissions for everyone.
 
+Keep the exported bundle. `make cert-export` writes `.dist/signing-identity.p12`
+while the identity is being made, and that is the only copy that will ever exist: a
+key already in the keychain cannot be exported afterwards. The certificate was
+replaced once, between 1.1.0 and the release after it, because that copy had been
+deleted and CI needed the key. Everyone who updates across that boundary is asked
+for microphone permission once more.
+
 The hardened runtime is off for these builds, and must stay off. It enables library
 validation, which requires embedded frameworks to carry the same Team ID as the app.
 A self-signed certificate has no Team ID, so Sparkle fails to load and the app does
@@ -107,10 +114,20 @@ is pinned.
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every push to `main` and on pull requests:
+`.github/workflows/ci.yml` runs on every push to any branch and on pull requests:
 checks, a universal build, a confirmation that both architectures are present, and
 the DMG attached to the run as an artifact for 30 days. Actions is free on public
 repositories, macOS runners included.
+
+That artifact is how a change gets tried before it is merged. Push a branch, open
+the run, and the DMG is at the bottom, named for the branch and the commit. A new
+push cancels the build it replaces, since only the newest one is any use.
+
+Those builds are signed with the same certificate the releases use, held as a
+repository secret as well as in the release environment, so installing one is not
+installing a different app: microphone permission and the login item survive. A
+pull request from a fork gets no secrets and so gets an ad-hoc signature instead,
+which the build says out loud rather than failing over.
 
 CI builds with `SIDETONE_SKIP_APPCAST=1`, because it has no signing key and an
 unsigned appcast is worse than none. Those artifacts are for trying a build, not
