@@ -85,6 +85,11 @@ jobs:
           name: ${{ steps.name.outputs.artifact }}
           path: .dist/Sidetone-*.dmg
           retention-days: 30
+          # `.dist` is a hidden directory, and this action skips hidden files unless
+          # told otherwise. It warns and carries on, so the run passes with nothing
+          # attached to it.
+          include-hidden-files: true
+          if-no-files-found: error
 
       - name: Remove the key from the runner
         if: always()
