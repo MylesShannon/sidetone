@@ -499,19 +499,33 @@ Report.suite("Device change reporting") {
 
 	// Resolution asks the system rather than trusting that record, or a default that
 	// moved while the question was failing would point at the wrong device for good.
+	// Resolution reads the cached UID first. Asking the system every time is a round
+	// trip to coreaudiod, and this is read from a panel redrawing thirty times a
+	// second, where it cost more processor than the audio did.
 	source.defaultInput = "usb-mic"
-	Report.check(store.defaultInput()?.uid == "usb-mic", "the default resolves live, with no refresh")
+	Report.check(
+		store.defaultInput()?.uid == "built-in",
+		"a cached default that still names a device is used as it stands"
+	)
+	store.refresh()
+	Report.check(
+		store.defaultInput()?.uid == "usb-mic",
+		"and a refresh moves it, which is what the listener brings"
+	)
 
 	source.defaultInput = nil
 	Report.check(
-		store.defaultInput()?.uid == "built-in",
-		"a failing lookup falls back to the last good answer"
+		store.defaultInput()?.uid == "usb-mic",
+		"a failing lookup leaves the last good answer standing"
 	)
+
+
 
 	// CoreAudio sometimes names no default at all for a whole process. Refusing to
 	// start is worse than picking the built-in device, which is what the machine would
 	// have fallen back to anyway.
 	source.defaultInput = "unplugged-thing"
+	store.refresh()
 	Report.check(
 		store.defaultInput()?.uid == "built-in",
 		"a default naming something absent falls back to the built-in device"
@@ -519,7 +533,6 @@ Report.suite("Device change reporting") {
 
 	source.devices = [mic]
 	store.refresh()
-	source.defaultInput = "unplugged-thing"
 	Report.check(
 		store.defaultInput()?.uid == "usb-mic",
 		"and to whatever is there when nothing is built in"
