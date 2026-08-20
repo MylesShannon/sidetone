@@ -3,11 +3,12 @@ name: Release
 # Pushing a v* tag publishes that version: signed universal build, DMG attached to
 # a GitHub release, and a re-signed appcast committed to main so Pages serves it.
 #
-# Needs three secrets, all on the "release" environment rather than the repository,
+# Needs four secrets, all on the "release" environment rather than the repository,
 # so an approval gate stands between a push and the signing keys:
 #   SPARKLE_PRIVATE_KEY     the EdDSA private key that authorises updates
 #   SIGNING_CERT_P12        base64 of the code signing identity as a .p12
 #   SIGNING_CERT_PASSWORD   the password for that .p12
+#   APPCAST_DEPLOY_KEY      an SSH key allowed past the ruleset on main
 on:
   push:
     tags: ['v*']
@@ -120,6 +121,8 @@ jobs:
           fi
 
       - name: Publish the appcast to main
+        env:
+          DEPLOY_KEY: ${{ secrets.APPCAST_DEPLOY_KEY }}
         run: |
           cp docs/appcast.xml "$RUNNER_TEMP/appcast.xml"
           git fetch origin main
@@ -130,10 +133,18 @@ jobs:
           git add docs/appcast.xml
           if git diff --cached --quiet; then
             echo "appcast unchanged"
-          else
-            git commit -m "chore: appcast for $GITHUB_REF_NAME"
-            git push origin main
+            exit 0
           fi
+          git commit -m "chore: appcast for $GITHUB_REF_NAME"
+
+          # main takes pull requests only, and a personal repository can name just two
+          # things in a ruleset's bypass list: an admin, and a deploy key. So this goes
+          # over SSH as the key rather than as the Actions token, which is turned away.
+          key="$RUNNER_TEMP/appcast_key"
+          printf '%s\n' "$DEPLOY_KEY" > "$key"
+          chmod 600 "$key"
+          export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          git push git@github.com:MylesShannon/sidetone.git HEAD:main
 
       - name: Create the release
         env:
@@ -153,4 +164,4 @@ jobs:
         if: always()
         run: |
           security delete-keychain "${RELEASE_KEYCHAIN:-$RUNNER_TEMP/release.keychain-db}" || true
-          rm -f "$RUNNER_TEMP/sparkle_ed_key"
+          rm -f "$RUNNER_TEMP/sparkle_ed_key" "$RUNNER_TEMP/appcast_key"
