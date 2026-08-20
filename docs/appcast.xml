@@ -3,6 +3,22 @@
     <channel>
         <title>Sidetone</title>
         <item>
+            <title>1.1.1</title>
+            <pubDate>Thu, 20 Aug 2026 23:36:47 +0000</pubDate>
+            <sparkle:version>1.1.1</sparkle:version>
+            <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Sidetone 1.1.1</h2>
+<p>A fraction of the processor it used to take.</p>
+<ul>
+	<li>Monitoring with the panel closed took about fourteen per cent of a processor core. It now takes about one, which is battery back and a fan that stays quiet.</li>
+	<li>The panel costs less to keep open as well, and the meters move as smoothly as they did.</li>
+	<li>When a device you chose is unplugged, the panel names the device actually in use, rather than one that nothing is coming from.</li>
+</ul>
+]]></description>
+            <enclosure url="https://github.com/MylesShannon/sidetone/releases/download/v1.1.1/Sidetone-1.1.1.dmg" length="3941683" type="application/octet-stream" sparkle:edSignature="EgJsL4MRfpOqgead+2qfLOa9qao+VnDHMh9GjEWTGcouqxjTGuoq8ruxTG7ovyRD3jRcJRwQN4UuQMypprIiDg=="/>
+        </item>
+        <item>
             <title>1.1.0</title>
             <pubDate>Tue, 18 Aug 2026 19:07:16 +0000</pubDate>
             <sparkle:version>1.1.0</sparkle:version>
