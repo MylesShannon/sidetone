@@ -109,6 +109,28 @@ private struct PopUpButton: NSViewRepresentable {
 	}
 }
 
+/// Reads the snapshot itself rather than being handed one.
+///
+/// Read from the panel's own body, thirty updates a second invalidate the whole
+/// panel: the device menus are rebuilt at that rate, each with a fresh array of
+/// titles, along with every slider and the footer. Kept in here, the redraw is the
+/// meters and nothing else.
+private struct MetersView: View {
+	let model: AppModel
+
+	var body: some View {
+		VStack(spacing: 8) {
+			LevelMeterView(
+				peak: model.snapshot.peak,
+				rms: model.snapshot.rms,
+				clipping: model.snapshot.clipping,
+				isActive: model.isRunning
+			)
+			SpectrumView(bands: model.snapshot.bands, isActive: model.isRunning)
+		}
+	}
+}
+
 /// The window that drops down from the menu bar icon.
 struct MonitorPanel: View {
 	@Bindable var model: AppModel
@@ -173,15 +195,7 @@ struct MonitorPanel: View {
 	}
 
 	private var meters: some View {
-		VStack(spacing: 8) {
-			LevelMeterView(
-				peak: model.snapshot.peak,
-				rms: model.snapshot.rms,
-				clipping: model.snapshot.clipping,
-				isActive: model.isRunning
-			)
-			SpectrumView(bands: model.snapshot.bands, isActive: model.isRunning)
-		}
+		MetersView(model: model)
 	}
 
 	private var deviceControls: some View {
@@ -250,9 +264,19 @@ struct MonitorPanel: View {
 		if let absent { titles.append("\(absent) (not connected)") }
 		titles += devices.map(\.name)
 
-		// One entry for the default, and another for a pinned device that is not here.
+		// One entry for the default, and another for a chosen device that is not here.
 		let offset = absent == nil ? 1 : 2
-		let selected = followsDefault ? 0 : (pinned.map { $0 + offset } ?? 1)
+		let selected: Int = if followsDefault {
+			0
+		} else if let pinned {
+			pinned + offset
+		} else {
+			// Chosen but unplugged. Monitoring falls back to whatever is available, so
+			// the row shows that instead of a device nothing is coming from. The one
+			// that is missing stays in the list, because it is still remembered and
+			// monitoring returns to it when it comes back.
+			devices.firstIndex { $0.uid == resolved?.uid }.map { $0 + offset } ?? 0
+		}
 
 		return devicePickerRow(
 			title: title,

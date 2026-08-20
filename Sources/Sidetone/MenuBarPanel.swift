@@ -27,8 +27,15 @@ enum MenuBarPanel {
 		NSApp.windows.filter { $0.isVisible && $0.level == .popUpMenu }
 	}
 
-	private static var isOpen: Bool {
+	static var isOpen: Bool {
 		!panels.isEmpty
+	}
+
+	/// True when something on screen is showing live figures: the panel with its meters,
+	/// or the Settings window with its dropout count. When neither is up there is
+	/// nobody to show them to, and thirty redraws a second buys nothing.
+	static var isWatched: Bool {
+		isOpen || NSApp.windows.contains { $0.isVisible && $0.level == .normal }
 	}
 
 	/// The status item's button is buried inside its window rather than being the

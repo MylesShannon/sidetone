@@ -549,9 +549,11 @@ final class AppModel {
 
 	private func startMeterTimer() {
 		stopMeterTimer()
+		// Thirty a second, which is what the meters need to read as fluid. Each tick
+		// redraws them, so it is only paid while something is on screen to show.
 		meterTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
 			MainActor.assumeIsolated {
-				guard let self else { return }
+				guard let self, MenuBarPanel.isWatched else { return }
 				self.snapshot = self.engine.snapshot()
 			}
 		}

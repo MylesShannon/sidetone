@@ -10,23 +10,33 @@ struct LevelMeterView: View {
 
 	var body: some View {
 		HStack(spacing: 8) {
-			GeometryReader { geometry in
-				let width = geometry.size.width
-				ZStack(alignment: .leading) {
-					RoundedRectangle(cornerRadius: 3)
-						.fill(Theme.track)
+			// One drawing pass rather than a stack of shapes whose frames and offsets
+			// are recomputed thirty times a second.
+			Canvas { context, size in
+				let corner = CGSize(width: 3, height: 3)
+				context.fill(
+					Path(roundedRect: CGRect(origin: .zero, size: size), cornerSize: corner),
+					with: .color(Theme.track)
+				)
 
-					RoundedRectangle(cornerRadius: 3)
-						.fill(Theme.level(rms))
-						.frame(width: width * CGFloat(isActive ? normalized(rms) : 0))
+				guard isActive else { return }
 
-					if isActive, peak > 0.001 {
-						RoundedRectangle(cornerRadius: 1)
-							.fill(Theme.level(peak))
-							.frame(width: 2)
-							.offset(x: max(0, width * CGFloat(normalized(peak)) - 2))
-					}
+				let level = CGFloat(normalized(rms))
+				if level > 0 {
+					context.fill(
+						Path(roundedRect: CGRect(x: 0, y: 0, width: size.width * level, height: size.height),
+						     cornerSize: corner),
+						with: .color(Theme.level(rms))
+					)
 				}
+
+				guard peak > 0.001 else { return }
+				let x = max(0, size.width * CGFloat(normalized(peak)) - 2)
+				context.fill(
+					Path(roundedRect: CGRect(x: x, y: 0, width: 2, height: size.height),
+					     cornerSize: CGSize(width: 1, height: 1)),
+					with: .color(Theme.level(peak))
+				)
 			}
 			.frame(height: 8)
 
@@ -35,7 +45,8 @@ struct LevelMeterView: View {
 				.frame(width: 8, height: 8)
 				.accessibilityLabel(clipping ? "Clipping" : "Not clipping")
 		}
-		.animation(.linear(duration: 0.05), value: rms)
+		// No animation on the level. The meter's ballistics already smooth it, and
+		// animating asks for a redraw at the display's rate between every update.
 		.help(clipping ? "The signal is clipping. Lower the gain." : "Input level")
 	}
 

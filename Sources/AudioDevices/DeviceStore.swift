@@ -41,17 +41,27 @@ public final class DeviceStore {
 	/// out, is never corrected: a cache that is merely wrong provokes no notification.
 	/// The cached value stays as a fallback for the moments the question fails.
 	public func defaultInput() -> AudioDevice? {
-		if let named = device(uid: source.defaultDeviceUID(input: true) ?? defaultInputUID) {
-			return named
-		}
-		return fallback(inputs)
+		resolveDefault(input: true, cached: defaultInputUID, candidates: inputs)
 	}
 
 	public func defaultOutput() -> AudioDevice? {
-		if let named = device(uid: source.defaultDeviceUID(input: false) ?? defaultOutputUID) {
+		resolveDefault(input: false, cached: defaultOutputUID, candidates: outputs)
+	}
+
+	/// The cached UID first, and the system only when that fails to name a device.
+	///
+	/// Asking the system every time is a round trip to coreaudiod, and this is read
+	/// from a panel that redraws thirty times a second while monitoring: it cost more
+	/// processor than the audio did. The cache can still be wrong, and nothing would
+	/// correct it, so a miss is worth one live question before falling back.
+	private func resolveDefault(
+		input: Bool, cached: String?, candidates: [AudioDevice]
+	) -> AudioDevice? {
+		if let named = device(uid: cached) { return named }
+		if let live = source.defaultDeviceUID(input: input), let named = device(uid: live) {
 			return named
 		}
-		return fallback(outputs)
+		return fallback(candidates)
 	}
 
 	/// CoreAudio occasionally refuses to name a default device for the whole life of a
