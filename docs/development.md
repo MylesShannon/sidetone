@@ -153,7 +153,13 @@ publish if the appcast's stated byte count does not match the DMG being uploaded
 That second check exists because a mismatch there is invisible until an update
 silently fails to install.
 
-### The three secrets
+That commit to `main` needs a way past the ruleset, which takes pull requests only.
+A personal repository can name two kinds of thing in a ruleset's bypass list: an
+admin, and a deploy key. The Actions token is neither, so the appcast push goes over
+SSH as a deploy key held in `APPCAST_DEPLOY_KEY`. A GitHub App would be the usual
+answer and is rejected here for want of an organisation to install it in.
+
+### The four secrets
 
 These belong to a **`release` environment** rather than the repository, so a
 required reviewer stands between pushing a tag and the keys being readable.
@@ -163,6 +169,7 @@ required reviewer stands between pushing a tag and the keys being readable.
 | `SPARKLE_PRIVATE_KEY` | `.build/artifacts/sparkle/Sparkle/bin/generate_keys -x key.txt` then the file contents |
 | `SIGNING_CERT_P12` | `security export -k login.keychain-db -t identities -f pkcs12 -P <password> -o identity.p12`, then `base64 -i identity.p12 \| pbcopy` |
 | `SIGNING_CERT_PASSWORD` | the password chosen during that export |
+| `APPCAST_DEPLOY_KEY` | `ssh-keygen -t ed25519`, the public half added as a repository deploy key with write access, the private half here |
 
 Delete the exported files afterwards. The Sparkle export in particular is
 equivalent to the key itself.
