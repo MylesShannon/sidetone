@@ -165,18 +165,16 @@ struct MonitorPanel: View {
 		.frame(width: Metrics.panel)
 		// The menu bar window grows with the panel but will not shrink again, which
 		// leaves an empty shadowed strip where the meters were. Changing identity with
-		// the panel's shape makes SwiftUI build it afresh, which was enough locally and
-		// not in a release build, so the height it settles at is handed to the window.
+		// the panel's shape makes SwiftUI build it afresh, which was enough in a build
+		// linked against the macOS 26 SDK and not in a release, so the height the panel
+		// settles at is handed to the window as well: 338 points with the meters, 239
+		// without, and nothing else knows those numbers.
 		.id(layout)
 		.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
 			guard height > Metrics.leastPlausibleHeight else { return }
 			MenuBarPanel.shrink(toContentHeight: height)
 		}
-		.onAppear {
-			model.panelOpened()
-			PanelDiag.windows("panel opened")
-		}
-		.onChange(of: layout) { _, new in PanelDiag.windows("layout is now \(new)") }
+		.onAppear { model.panelOpened() }
 	}
 
 	/// Names the panel's shape: everything that can appear or disappear and so change
