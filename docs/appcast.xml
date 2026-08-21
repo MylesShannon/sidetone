@@ -3,6 +3,20 @@
     <channel>
         <title>Sidetone</title>
         <item>
+            <title>1.1.2</title>
+            <pubDate>Fri, 21 Aug 2026 18:10:35 +0000</pubDate>
+            <sparkle:version>1.1.2</sparkle:version>
+            <sparkle:shortVersionString>1.1.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Sidetone 1.1.2</h2>
+<p>Switching monitoring off closes the panel back up.</p>
+<ul>
+	<li>Turning monitoring off took the meters away and left a band of empty space above the panel, which made it look like it was floating below the menu bar. The panel now shrinks back to fit what is in it.</li>
+</ul>
+]]></description>
+            <enclosure url="https://github.com/MylesShannon/sidetone/releases/download/v1.1.2/Sidetone-1.1.2.dmg" length="3945965" type="application/octet-stream" sparkle:edSignature="8jfVhy52SF87pgIS9ND1Nah8LJkwmUltLOCQfB/c60jTsZoUeqYPOHpTG0SU9xCMpY9mZVgVJuPk8WFW/tfIAQ=="/>
+        </item>
+        <item>
             <title>1.1.1</title>
             <pubDate>Thu, 20 Aug 2026 23:36:47 +0000</pubDate>
             <sparkle:version>1.1.1</sparkle:version>
@@ -36,25 +50,6 @@
 </ul>
 ]]></description>
             <enclosure url="https://github.com/MylesShannon/sidetone/releases/download/v1.1.0/Sidetone-1.1.0.dmg" length="3943983" type="application/octet-stream" sparkle:edSignature="vmqCugG7jPS+VLS28dT3XsGYYrLkCzv8yc6tDcowIUX3WhivVIVbvnwzlkpc+MBr3zCWEC3aUJM6NsqMiGPhCw=="/>
-        </item>
-        <item>
-            <title>1.0.0</title>
-            <pubDate>Sat, 15 Aug 2026 23:58:13 -0400</pubDate>
-            <sparkle:version>1.0.0</sparkle:version>
-            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Sidetone 1.0.0</h2>
-<p>First release.</p>
-<ul>
-	<li>Sends any input to any output, so you can hear your own microphone, or a line-in from something else.</li>
-	<li>Capture and playback run on independent clocks, joined by a ring buffer with drift correction, so mismatched devices keep working.</li>
-	<li>Level meter, spectrum, gain in dB with a click-free ramp, and a safety limiter.</li>
-	<li>Latency profiles that start as tight as your devices allow and back off if your Mac cannot keep up.</li>
-	<li>Global shortcuts, named presets, and devices remembered across unplugging.</li>
-	<li>Stops and starts itself around sleep, and tells you if a device disappears.</li>
-</ul>
-]]></description>
-            <enclosure url="https://github.com/MylesShannon/sidetone/releases/download/v1.0.0/Sidetone-1.0.0.dmg" length="3868045" type="application/octet-stream" sparkle:edSignature="XzfIDCDgIkbSHuYKY17LeBdr7ehMULMrjHGxA3RIUThHhPkKZaNoVMlqjL+bx5q7LSse3t3TMDASB8ZtTU4yDg=="/>
         </item>
     </channel>
 </rss>
