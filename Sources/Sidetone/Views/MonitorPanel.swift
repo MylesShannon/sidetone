@@ -42,6 +42,10 @@ private enum Metrics {
 	static let glyph: CGFloat = 22
 	static let readout: CGFloat = 58
 
+	/// Shorter than the header, a row and the footer, so a measurement below this is a
+	/// measurement gone wrong rather than a small panel.
+	static let leastPlausibleHeight: CGFloat = 160
+
 	static let content = panel - inset * 2
 	/// A control on a row that begins with an icon.
 	static let control = content - icon - gap
@@ -161,11 +165,15 @@ struct MonitorPanel: View {
 		.frame(width: Metrics.panel)
 		// The menu bar window grows with the panel but will not shrink again, which
 		// leaves an empty shadowed strip where the meters were. Changing identity with
-		// the panel's shape makes SwiftUI build it afresh and size the window from
-		// scratch. Setting the window's frame directly also works, but only in builds
-		// linked against older SDKs: newer ones respond by laying the panel out at its
-		// ideal size, where every menu shrinks to the width of its own text.
+		// the panel's shape makes SwiftUI build it afresh, which was enough in a build
+		// linked against the macOS 26 SDK and not in a release, so the height the panel
+		// settles at is handed to the window as well: 338 points with the meters, 239
+		// without, and nothing else knows those numbers.
 		.id(layout)
+		.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+			guard height > Metrics.leastPlausibleHeight else { return }
+			MenuBarPanel.shrink(toContentHeight: height)
+		}
 		.onAppear { model.panelOpened() }
 	}
 

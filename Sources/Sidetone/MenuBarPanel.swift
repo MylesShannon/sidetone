@@ -19,6 +19,27 @@ enum MenuBarPanel {
 		icon.performClick(nil)
 	}
 
+	/// Brings the window down to the height of the panel inside it, keeping the top edge
+	/// where it is because the panel hangs from the menu bar.
+	///
+	/// Only ever downwards. The window grows for the meters by itself; the fault is that
+	/// it keeps that height once they go, leaving a shadowed band of nothing above the
+	/// panel. The height has to be measured by SwiftUI and passed in: the hosting view
+	/// in this window answers `fittingSize` with zero, so anything that asks AppKit how
+	/// tall the panel wants to be gets nothing and does nothing.
+	static func shrink(toContentHeight height: CGFloat) {
+		guard let window = panels.first else { return }
+		let target = window
+			.frameRect(forContentRect: CGRect(x: 0, y: 0, width: window.frame.width, height: height))
+			.height
+		guard target < window.frame.height - 0.5 else { return }
+
+		var frame = window.frame
+		frame.origin.y = frame.maxY - target
+		frame.size.height = target
+		window.setFrame(frame, display: true)
+	}
+
 	/// Told apart by level rather than class: the panel sits at the pop-up menu level,
 	/// the status item's own window lower down at the status bar level, and the
 	/// Settings window lower still. The class names for both are private to AppKit and
