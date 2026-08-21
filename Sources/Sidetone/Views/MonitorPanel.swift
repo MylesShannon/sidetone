@@ -42,6 +42,10 @@ private enum Metrics {
 	static let glyph: CGFloat = 22
 	static let readout: CGFloat = 58
 
+	/// Shorter than the header, a row and the footer, so a measurement below this is a
+	/// measurement gone wrong rather than a small panel.
+	static let leastPlausibleHeight: CGFloat = 160
+
 	static let content = panel - inset * 2
 	/// A control on a row that begins with an icon.
 	static let control = content - icon - gap
@@ -109,43 +113,6 @@ private struct PopUpButton: NSViewRepresentable {
 	}
 }
 
-/// Sets the height of the menu bar window to the height of the panel inside it.
-///
-/// The window grows to fit the meters and keeps that height once they go, leaving a
-/// shadowed band above the panel with nothing in it. Rebuilding the panel under a new
-/// identity is enough for SwiftUI to size the window again when the app is linked
-/// against the macOS 26 SDK, and not when it is linked against the 15 SDK the releases
-/// are built with, so the height is set here rather than hoped for. The top edge stays
-/// where it is, because the panel hangs from the menu bar.
-private struct PanelFitter: NSViewRepresentable {
-	/// Not read. Changing it is what brings `updateNSView` around after the panel has
-	/// gained or lost a row.
-	let layout: String
-
-	func makeNSView(context _: Context) -> NSView {
-		NSView(frame: .zero)
-	}
-
-	func updateNSView(_ view: NSView, context _: Context) {
-		// A hop, because the panel has not been laid out at its new height yet.
-		DispatchQueue.main.async {
-			guard let window = view.window, let content = window.contentView else { return }
-			content.layoutSubtreeIfNeeded()
-
-			let height = window.frameRect(forContentRect: CGRect(origin: .zero, size: content.fittingSize)).height
-			// A fitting size of nothing means the panel could not be measured, and
-			// resizing to that would hide it. Leaving the window alone is the better
-			// failure: a band of empty space rather than no panel.
-			guard height > 1, abs(window.frame.height - height) > 0.5 else { return }
-
-			var frame = window.frame
-			frame.origin.y = frame.maxY - height
-			frame.size.height = height
-			window.setFrame(frame, display: true)
-		}
-	}
-}
-
 /// Reads the snapshot itself rather than being handed one.
 ///
 /// Read from the panel's own body, thirty updates a second invalidate the whole
@@ -196,13 +163,20 @@ struct MonitorPanel: View {
 		}
 		.padding(Metrics.inset)
 		.frame(width: Metrics.panel)
-		.background(PanelFitter(layout: layout))
 		// The menu bar window grows with the panel but will not shrink again, which
 		// leaves an empty shadowed strip where the meters were. Changing identity with
 		// the panel's shape makes SwiftUI build it afresh, which was enough locally and
-		// not in a release build. The fitter above is what actually sets the height.
+		// not in a release build, so the height it settles at is handed to the window.
 		.id(layout)
-		.onAppear { model.panelOpened() }
+		.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+			guard height > Metrics.leastPlausibleHeight else { return }
+			MenuBarPanel.shrink(toContentHeight: height)
+		}
+		.onAppear {
+			model.panelOpened()
+			PanelDiag.windows("panel opened")
+		}
+		.onChange(of: layout) { _, new in PanelDiag.windows("layout is now \(new)") }
 	}
 
 	/// Names the panel's shape: everything that can appear or disappear and so change
