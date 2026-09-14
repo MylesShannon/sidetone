@@ -139,6 +139,7 @@ private struct MetersView: View {
 struct MonitorPanel: View {
 	@Bindable var model: AppModel
 	@Environment(\.openWindow) private var openWindow
+	@State private var contentHeight: CGFloat = 0
 
 	var body: some View {
 		VStack(alignment: .leading, spacing: 14) {
@@ -171,10 +172,22 @@ struct MonitorPanel: View {
 		// without, and nothing else knows those numbers.
 		.id(layout)
 		.onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
-			guard height > Metrics.leastPlausibleHeight else { return }
-			MenuBarPanel.shrink(toContentHeight: height)
+			contentHeight = height
+			fitWindow()
 		}
-		.onAppear { model.panelOpened() }
+		.onAppear {
+			model.panelOpened()
+			fitWindow()
+		}
+	}
+
+	/// The window keeps whatever height it was last given, and `onGeometryChange` only
+	/// speaks up when the panel's own height moves. A display change can leave the window
+	/// wrong while the panel inside it is the same height as before, so opening the panel
+	/// re-fits it as well.
+	private func fitWindow() {
+		guard contentHeight > Metrics.leastPlausibleHeight else { return }
+		MenuBarPanel.shrink(toContentHeight: contentHeight)
 	}
 
 	/// Names the panel's shape: everything that can appear or disappear and so change
