@@ -3,9 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sidetone</title>
-<meta name="description" content="Hear your own mic through your headphones, from the macOS menu bar.">
+<title>Sidetone: hear your own mic in your headphones on Mac</title>
+<meta name="description" content="Free, open-source macOS menu bar app that plays your mic or line-in through your headphones or speakers. Works with USB mics and Bluetooth headphones.">
+<link rel="canonical" href="https://mylesshannon.github.io/sidetone/">
 <link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sidetone">
+<meta property="og:title" content="Sidetone: hear your own mic in your headphones on Mac">
+<meta property="og:description" content="Free, open-source macOS menu bar app that plays your microphone or line-in through your headphones or speakers.">
+<meta property="og:url" content="https://mylesshannon.github.io/sidetone/">
+<meta property="og:image" content="https://mylesshannon.github.io/sidetone/icon.png">
+<meta property="og:image:width" content="256">
+<meta property="og:image:height" content="256">
+<meta property="og:image:alt" content="The Sidetone app icon">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{
+	"@context": "https://schema.org",
+	"@type": "SoftwareApplication",
+	"name": "Sidetone",
+	"description": "A macOS menu bar app that plays your microphone or line-in through your headphones or speakers, with drift correction so a USB mic into Bluetooth headphones keeps working.",
+	"url": "https://mylesshannon.github.io/sidetone/",
+	"downloadUrl": "https://github.com/MylesShannon/sidetone/releases/latest",
+	"image": "https://mylesshannon.github.io/sidetone/icon.png",
+	"applicationCategory": "MultimediaApplication",
+	"operatingSystem": "macOS 15 or later",
+	"license": "https://opensource.org/licenses/MIT",
+	"isAccessibleForFree": true,
+	"offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+	"author": { "@type": "Person", "name": "Myles Shannon" }
+}
+</script>
 <style>
 	:root { color-scheme: light dark; }
 	body {
@@ -17,39 +46,63 @@
 	}
 	img { width: 128px; height: 128px; }
 	h1 { margin: 1rem 0 0.25rem; font-size: 2rem; }
-	p.tagline { margin: 0 0 2rem; opacity: 0.7; }
-	p { text-align: left; }
+	h2 { margin: 2.5rem 0 0.5rem; font-size: 1.25rem; text-align: left; }
+	p.tagline { margin: 0 0 2rem; opacity: 0.7; text-align: center; text-wrap: balance; }
+	p, ul { text-align: left; }
 	nav { margin: 2rem 0; display: flex; gap: 1.25rem; justify-content: center; flex-wrap: wrap; }
 	footer { margin-top: 3rem; font-size: 0.85rem; opacity: 0.6; }
 </style>
 </head>
 <body>
-	<img src="icon.png" alt="Sidetone">
-	<h1>Sidetone</h1>
-	<p class="tagline">Hear your own mic through your headphones, from the macOS menu bar.</p>
+	<header>
+		<img src="icon.png" alt="Sidetone app icon" width="128" height="128">
+		<h1>Sidetone</h1>
+		<p class="tagline">Hear your own mic through your headphones, from the macOS menu bar.</p>
+	</header>
 
-	<p>
-		Sidetone sends any input to whatever output you pick. Usually that means hearing your own
-		microphone while you talk, but a line-in works just as well.
-	</p>
-	<p>
-		Capture and playback run on independent clocks, joined by a ring buffer that corrects for
-		drift, so a USB mic into Bluetooth headphones keeps working instead of slowly falling apart.
-	</p>
+	<main>
+		<p>
+			Sidetone sends any input to whatever output you pick. Usually that means hearing your own
+			microphone while you talk, but a line-in works just as well. It's free and open source.
+		</p>
+		<p>
+			Capture and playback run on independent clocks, joined by a ring buffer that corrects for
+			drift, so a USB mic into Bluetooth headphones keeps working instead of slowly falling apart.
+		</p>
 
-	<nav>
-		<a href="https://github.com/MylesShannon/sidetone">Source</a>
-		<a href="https://github.com/MylesShannon/sidetone/releases/latest">Download</a>
-		<a href="https://github.com/MylesShannon/sidetone/blob/main/docs/architecture.md">How it works</a>
-	</nav>
+		<nav>
+			<a href="https://github.com/MylesShannon/sidetone/releases/latest">Download for macOS</a>
+			<a href="https://github.com/MylesShannon/sidetone">Source on GitHub</a>
+			<a href="https://github.com/MylesShannon/sidetone/blob/main/docs/architecture.md">How it works</a>
+		</nav>
 
-	<p>
-		Sidetone isn't notarized, so macOS blocks it the first time you open it. Click Done on the
-		warning rather than Move to Trash, then open System Settings, go to Privacy &amp; Security,
-		and click "Open Anyway".
-		<a href="https://github.com/MylesShannon/sidetone#if-you-downloaded-the-dmg">The longer
-		version.</a>
-	</p>
+		<h2>What it does</h2>
+		<ul>
+			<li>Mic monitoring on Mac: pick an input and an output, flip the switch, and hear yourself.</li>
+			<li>Gain in dB that ramps as you drag, a level meter, and a spectrum so you can see sound arriving.</li>
+			<li>A low cut, bass and treble, and presets for the devices and settings you use most.</li>
+			<li>⌥⌘M starts and stops monitoring from any app, with an optional hold-to-mute key.</li>
+			<li>Follows the system default devices, so putting headphones on moves monitoring to them.</li>
+			<li>Warns about feedback before you send a microphone to speakers.</li>
+		</ul>
+
+		<h2>Not just microphones</h2>
+		<p>
+			Anything the Mac sees as an input works. A common use: a games console on a monitor's
+			picture-in-picture input has no sound, because monitors only play audio from the main
+			input. Feed the console's audio into a USB line-in, point Sidetone at it and send it to the
+			monitor's speakers, and you can hear the console while the Mac keeps the main picture.
+		</p>
+
+		<h2>Install</h2>
+		<p>
+			Sidetone needs macOS 15 or later. It isn't notarized, so macOS blocks it the first time you
+			open it. Click Done on the warning rather than Move to Trash, then open System Settings, go
+			to Privacy &amp; Security, and click "Open Anyway".
+			<a href="https://github.com/MylesShannon/sidetone#if-you-downloaded-the-dmg">The longer
+			version.</a>
+		</p>
+	</main>
 
 	<footer>
 		MIT licensed. A personal project, not connected to any employer.
