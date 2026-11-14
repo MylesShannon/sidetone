@@ -73,8 +73,12 @@ hdiutil create -quiet -volname "Sidetone $VERSION" -srcfolder "$work/dmg" -forma
 cp "$DMG" "$work/releases/"
 cp "$UPDATE_NOTES" "$work/releases/Sidetone-$VERSION.html"
 echo "Signing the appcast..."
-.build-arm64/artifacts/sparkle/Sparkle/bin/generate_appcast \
+SPARKLE=.build-arm64/artifacts/sparkle/Sparkle/bin
+# generate_keys may read the key it stored without asking, while generate_appcast would need a dialog, which SSH can't show.
+"$SPARKLE/generate_keys" -x "$work/sparkle-key" >/dev/null
+"$SPARKLE/generate_appcast" --ed-key-file "$work/sparkle-key" \
   --download-url-prefix "https://github.com/$REPO/releases/download/$TAG/" -o docs/appcast.xml "$work/releases"
+rm -f "$work/sparkle-key"
 # The appcast lists every release, so the entry is found by file name.
 declared=$(sed -n "s|.*$(basename "$DMG")\" length=\"\([0-9]*\)\".*|\1|p" docs/appcast.xml)
 if [ "$declared" != "$(stat -f %z "$DMG")" ]; then
