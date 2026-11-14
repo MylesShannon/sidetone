@@ -3,6 +3,21 @@
     <channel>
         <title>Sidetone</title>
         <item>
+            <title>1.1.4</title>
+            <pubDate>Sat, 14 Nov 2026 15:10:57 -0500</pubDate>
+            <sparkle:version>1.1.4</sparkle:version>
+            <sparkle:shortVersionString>1.1.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Sidetone 1.1.4</h2>
+<p>Signed and notarized by Apple.</p>
+<ul>
+	<li>Sidetone now carries a Developer ID signature and Apple's notarization, so a downloaded copy opens like any other app, with no stop in Privacy &amp; Security first.</li>
+	<li>Because the signature changed, macOS asks for the microphone once more the first time you start monitoring. If Sidetone stops opening at login, turn on Open Sidetone at login in Settings again.</li>
+</ul>
+]]></description>
+            <enclosure url="https://github.com/MylesShannon/sidetone/releases/download/v1.1.4/Sidetone-1.1.4.dmg" length="3831880" type="application/octet-stream" sparkle:edSignature="TqMwEV6yiLYIAIF02HT4z3MSZi7y1BWqK4Z2C0axb7nKGURaB0KuVner//iUwAog//CKICUTwnxnKkFbhC+PDA=="/>
+        </item>
+        <item>
             <title>1.1.3</title>
             <pubDate>Mon, 14 Sep 2026 17:07:03 +0000</pubDate>
             <sparkle:version>1.1.3</sparkle:version>
@@ -29,22 +44,6 @@
 </ul>
 ]]></description>
             <enclosure url="https://github.com/MylesShannon/sidetone/releases/download/v1.1.2/Sidetone-1.1.2.dmg" length="3945965" type="application/octet-stream" sparkle:edSignature="8jfVhy52SF87pgIS9ND1Nah8LJkwmUltLOCQfB/c60jTsZoUeqYPOHpTG0SU9xCMpY9mZVgVJuPk8WFW/tfIAQ=="/>
-        </item>
-        <item>
-            <title>1.1.1</title>
-            <pubDate>Thu, 20 Aug 2026 23:36:47 +0000</pubDate>
-            <sparkle:version>1.1.1</sparkle:version>
-            <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Sidetone 1.1.1</h2>
-<p>A fraction of the processor it used to take.</p>
-<ul>
-	<li>Monitoring with the panel closed took about fourteen per cent of a processor core. It now takes about one, which is battery back and a fan that stays quiet.</li>
-	<li>The panel costs less to keep open as well, and the meters move as smoothly as they did.</li>
-	<li>When a device you chose is unplugged, the panel names the device actually in use, rather than one that nothing is coming from.</li>
-</ul>
-]]></description>
-            <enclosure url="https://github.com/MylesShannon/sidetone/releases/download/v1.1.1/Sidetone-1.1.1.dmg" length="3941683" type="application/octet-stream" sparkle:edSignature="EgJsL4MRfpOqgead+2qfLOa9qao+VnDHMh9GjEWTGcouqxjTGuoq8ruxTG7ovyRD3jRcJRwQN4UuQMypprIiDg=="/>
         </item>
     </channel>
 </rss>
