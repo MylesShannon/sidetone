@@ -3,11 +3,14 @@ set -eu
 trap 'echo "install.sh stopped at line $LINENO. The output above says why." >&2' ERR
 [ "$(id -u)" != 0 ] || { echo "Run as yourself, not with sudo: ./install.sh" >&2; exit 1; }
 [ $# -le 1 ] || { echo "Usage: ./install.sh [path/to/Sidetone.app]" >&2; exit 2; }
+if [ $# = 1 ]; then
+  [ -d "$1" ] || { echo "$1 isn't a Sidetone.app." >&2; exit 1; }
+  STAGE=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
+fi
 HERE=$(cd "$(dirname "$0")" && pwd)
 cd "$HERE"
 
 if [ $# = 1 ]; then
-  STAGE="$(cd "$OLDPWD" && cd "$(dirname "$1")" && pwd)/$(basename "$1")"
   codesign --verify --deep --strict \
     -R='anchor apple generic and identifier "com.mshannon.sidetone" and certificate leaf[subject.OU] = "6KUEM6Q5E2"' \
     "$STAGE" || { echo "$1 isn't a Sidetone.app from the official releases." >&2; exit 1; }

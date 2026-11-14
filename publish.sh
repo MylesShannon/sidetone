@@ -3,11 +3,10 @@ set -eu
 trap 'echo "publish.sh stopped at line $LINENO. The output above says why." >&2' ERR
 [ "$(id -u)" != 0 ] || { echo "Run as yourself, not with sudo: ./publish.sh <notes.md>" >&2; exit 1; }
 [ $# = 1 ] || { echo "Usage: ./publish.sh <notes.md>" >&2; exit 2; }
+[ -f "$1" ] || { echo "$1 isn't a file." >&2; exit 1; }
+NOTES=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
 HERE=$(cd "$(dirname "$0")" && pwd)
 cd "$HERE"
-
-(cd "$OLDPWD" && [ -f "$1" ]) || { echo "$1 isn't a file." >&2; exit 1; }
-NOTES="$(cd "$OLDPWD" && cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 
 REPO=MylesShannon/sidetone
 NOTARY_PROFILE=${NOTARY_PROFILE:-notary}
