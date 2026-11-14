@@ -22,29 +22,16 @@ into the earpiece. Without it, people shout.
 
 You need macOS 15 or later.
 
-```sh
-make install
-```
+Download the DMG from the
+[latest release](https://github.com/MylesShannon/sidetone/releases/latest), open
+it and drag Sidetone into Applications. It's signed and notarized by Apple, so it
+opens like any other app.
+
+To build it from source instead, run `./install.sh` on a Mac with Xcode.
 
 macOS asks for microphone access the first time you start monitoring, and asks
 about notifications when Sidetone first launches. Notifications are only used to
 tell you when monitoring stops on its own, so it is safe to refuse.
-
-### If you downloaded the DMG
-
-Sidetone isn't notarized, because notarizing costs $99 a year and this is a free
-side project. So the first time you open it, macOS blocks it and says it can't
-check the app for malware. The only buttons are "Move to Trash" and "Done", and
-Trash is the highlighted one. Click Done.
-
-Being blocked is what makes macOS offer an exception, so do that part first. Then
-open System Settings, go to Privacy & Security, scroll down to Security, and click
-"Open Anyway" next to the message about Sidetone. Confirm with Touch ID or your
-password, then click "Open Anyway" again in the dialog that follows. If Security
-says nothing about Sidetone, open the app again and come straight back.
-
-You only do this once. Building from source with `make install` skips it, because
-macOS only puts that block on files you downloaded.
 
 ## Using it
 

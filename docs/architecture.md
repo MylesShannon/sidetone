@@ -41,6 +41,6 @@ which is out of scope.
 | `AudioCore`    | Ring buffer, resampler, drift control, DSP, the monitoring engine  |
 | `AppServices`  | Settings, presets, login item, global shortcuts, feedback rule     |
 | `Sidetone`     | Menu bar app and SwiftUI views                                     |
-| `Verify`       | The checks run by `make test`                                      |
+| `Verify`       | The checks, which `publish.sh` runs before every release           |
 
 Building and testing are covered in [development.md](development.md).
