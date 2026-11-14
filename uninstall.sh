@@ -10,6 +10,8 @@ case "${1:-}" in
   --permissions-only) mode=permissions ;;
   *) echo "Usage: ./uninstall.sh [--delete-settings | --permissions-only]" >&2; exit 2 ;;
 esac
+HERE=$(cd "$(dirname "$0")" && pwd)
+cd "$HERE"
 
 pkill -x Sidetone || true
 for _ in $(seq 1 10); do
