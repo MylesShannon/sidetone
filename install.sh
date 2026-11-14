@@ -1,18 +1,19 @@
 #!/bin/bash
 set -eu
-
-[ "$(id -u)" != 0 ] || { echo "Run as yourself, not with sudo: ./install.sh"; exit 1; }
-[ $# -le 1 ] || { echo "Usage: ./install.sh [path/to/Sidetone.app]"; exit 2; }
+trap 'echo "install.sh stopped at line $LINENO. The output above says why." >&2' ERR
+[ "$(id -u)" != 0 ] || { echo "Run as yourself, not with sudo: ./install.sh" >&2; exit 1; }
+[ $# -le 1 ] || { echo "Usage: ./install.sh [path/to/Sidetone.app]" >&2; exit 2; }
 HERE=$(cd "$(dirname "$0")" && pwd)
+cd "$HERE"
+
 if [ $# = 1 ]; then
-  STAGE="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+  STAGE="$(cd "$OLDPWD" && cd "$(dirname "$1")" && pwd)/$(basename "$1")"
   codesign --verify --deep --strict \
     -R='anchor apple generic and identifier "com.mshannon.sidetone" and certificate leaf[subject.OU] = "6KUEM6Q5E2"' \
-    "$STAGE" || { echo "$1 isn't a Sidetone.app from the official releases."; exit 1; }
+    "$STAGE" || { echo "$1 isn't a Sidetone.app from the official releases." >&2; exit 1; }
 else
   STAGE="$HERE/build/Sidetone.app"
 fi
-cd "$HERE"
 
 INSTALLED="/Applications/Sidetone.app"
 
