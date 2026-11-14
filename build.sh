@@ -66,8 +66,8 @@ ICONSET=build/AppIcon.iconset
 rm -rf "$ICONSET"
 mkdir "$ICONSET"
 for size in 16 32 128 256 512; do
-  logged sips "Making the app icon" sips -z "$size" "$size" Resources/AppIcon.png --out "$ICONSET/icon_${size}x${size}.png"
-  logged sips "Making the app icon" sips -z $((size * 2)) $((size * 2)) Resources/AppIcon.png --out "$ICONSET/icon_${size}x${size}@2x.png"
+  logged sips "Building the icon" sips -z "$size" "$size" Resources/AppIcon.png --out "$ICONSET/icon_${size}x${size}.png"
+  logged sips "Building the icon" sips -z $((size * 2)) $((size * 2)) Resources/AppIcon.png --out "$ICONSET/icon_${size}x${size}@2x.png"
 done
 iconutil -c icns "$ICONSET" -o "$STAGE/Contents/Resources/AppIcon.icns"
 rm -rf "$ICONSET"
