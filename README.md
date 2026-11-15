@@ -46,7 +46,9 @@ You need macOS 15 or later.
 Download the DMG from the
 [latest release](https://github.com/MylesShannon/sidetone/releases/latest), open
 it and drag Sidetone into Applications. It's signed and notarized by Apple, so it
-opens like any other app.
+opens like any other app. If you open it from anywhere else, such as the DMG, it
+offers to move itself there with **Move to Applications**, because it can only open
+at login and update itself from Applications.
 
 To build it from source instead, run `./install.sh` on a Mac with Xcode or the
 Command Line Tools. [Development](docs/development.md) has the details.

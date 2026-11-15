@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 	private var didShutDown = false
 
 	func applicationDidFinishLaunching(_: Notification) {
+		if !MoveToApplications.isInApplications, MoveToApplications.offer() { return }
 		installSignalHandlers()
 		UNUserNotificationCenter.current().delegate = self
 		AppModel.shared.boot()

@@ -7,7 +7,8 @@ if CommandLine.arguments.dropFirst().first == "unregister" {
 }
 
 // A second copy, such as one opened from the DMG while the installed one runs, brings the first forward and quits.
-if let id = Bundle.main.bundleIdentifier,
+// A copy that just moved itself to Applications starts the new one before it quits.
+if !CommandLine.arguments.contains(MoveToApplications.relaunchArgument), let id = Bundle.main.bundleIdentifier,
    let first = NSRunningApplication.runningApplications(withBundleIdentifier: id)
    .first(where: { $0.processIdentifier != getpid() })
 {
