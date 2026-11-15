@@ -1,6 +1,5 @@
 import SwiftUI
 
-@main
 struct SidetoneApp: App {
 	@NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 	@State private var model = AppModel.shared

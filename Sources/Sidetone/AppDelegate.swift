@@ -2,18 +2,14 @@ import AppKit
 import Foundation
 import UserNotifications
 
-/// Owns process lifetime: one instance only, and a complete teardown on the way
-/// out no matter how the quit arrives.
+/// Owns process lifetime: a complete teardown on the way out no matter how the
+/// quit arrives.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
 	private var signalSources: [DispatchSourceSignal] = []
 	private var didShutDown = false
 
 	func applicationDidFinishLaunching(_: Notification) {
-		guard isOnlyInstance() else {
-			NSApp.terminate(nil)
-			return
-		}
 		installSignalHandlers()
 		UNUserNotificationCenter.current().delegate = self
 		AppModel.shared.boot()
@@ -43,11 +39,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 		guard !didShutDown else { return }
 		didShutDown = true
 		AppModel.shared.shutdown()
-	}
-
-	private func isOnlyInstance() -> Bool {
-		guard let bundleID = Bundle.main.bundleIdentifier else { return true }
-		return NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).count <= 1
 	}
 
 	/// A terminal `kill` or a stop from a launcher has to release the audio device
