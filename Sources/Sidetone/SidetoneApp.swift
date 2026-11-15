@@ -8,8 +8,7 @@ struct SidetoneApp: App {
 		MenuBarExtra {
 			MonitorPanel(model: model)
 		} label: {
-			Image(systemName: menuBarSymbol)
-				.accessibilityLabel(accessibilityLabel)
+			MenuBarLabel(symbol: menuBarSymbol, accessibilityLabel: accessibilityLabel)
 		}
 		.menuBarExtraStyle(.window)
 
@@ -30,5 +29,22 @@ struct SidetoneApp: App {
 		if case .failed = model.engine.state, !model.failureSeen { return "exclamationmark.triangle" }
 		guard model.isRunning else { return "waveform" }
 		return model.settings.data.muted ? "waveform.slash" : "waveform.circle.fill"
+	}
+}
+
+/// Opens Settings when the app is reopened, because the icon is the one view that
+/// lives as long as the app and can reach `openWindow`.
+private struct MenuBarLabel: View {
+	let symbol: String
+	let accessibilityLabel: String
+	@Environment(\.openWindow) private var openWindow
+
+	var body: some View {
+		Image(systemName: symbol)
+			.accessibilityLabel(accessibilityLabel)
+			.onReceive(NotificationCenter.default.publisher(for: AppDelegate.reopened)) { _ in
+				openWindow(id: SidetoneWindow.settings)
+				NSApp.activate(ignoringOtherApps: true)
+			}
 	}
 }

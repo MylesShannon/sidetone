@@ -62,7 +62,7 @@ tell you when monitoring stops on its own, so it is safe to refuse.
 Click the waveform in the menu bar, pick an input and an output, then flip the
 switch. Use headphones. Through the built-in speakers your mic hears itself and
 howls, and Sidetone will say so before you try it. The gear at the bottom of the
-panel opens Settings.
+panel opens Settings, and so does opening Sidetone again while it's running.
 
 - The slider sets gain in dB. It ramps as you drag, so it won't click.
 - The meter shows your level, and the bars below it show the frequencies, so you

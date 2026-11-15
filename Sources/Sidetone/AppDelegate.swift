@@ -6,6 +6,8 @@ import UserNotifications
 /// quit arrives.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+	static let reopened = Notification.Name("SidetoneReopened")
+
 	private var signalSources: [DispatchSourceSignal] = []
 	private var didShutDown = false
 
@@ -30,6 +32,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 		withCompletionHandler handler: @escaping (UNNotificationPresentationOptions) -> Void
 	) {
 		handler([.banner, .list])
+	}
+
+	func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {
+		NotificationCenter.default.post(name: Self.reopened, object: nil)
+		return false
 	}
 
 	func applicationWillTerminate(_: Notification) {
