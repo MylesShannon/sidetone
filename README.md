@@ -83,7 +83,7 @@ panel opens Settings.
   plugged in** under **General** and it also starts on its own when your devices
   appear.
 - The menu bar icon fills in while monitoring, shows a slash while muted, and
-  turns into a warning triangle when monitoring fails.
+  turns into a warning triangle when monitoring fails or the microphone is off.
 - Sidetone checks for new versions and offers to install them. It asks first, and
   you can turn off **Check for updates automatically** in Settings.
 
@@ -124,8 +124,9 @@ measurement.
 ### Why can't I hear anything?
 
 Check that the meter moves. If it doesn't, the input isn't sending anything. If
-Sidetone says it needs microphone access, open System Settings, go to
-**Privacy & Security**, then **Microphone**, and switch on Sidetone.
+Sidetone says it needs microphone access, click **Open Settings** in the panel and
+switch on Sidetone in the list that opens. Sidetone notices within a couple of
+seconds, without a restart, and starts monitoring if you had switched it on.
 
 ### Why does the audio crackle or break up?
 

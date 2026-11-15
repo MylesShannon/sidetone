@@ -144,6 +144,13 @@ struct MonitorPanel: View {
 	var body: some View {
 		VStack(alignment: .leading, spacing: 14) {
 			header
+			if model.microphoneDenied {
+				notice(
+					"Sidetone needs microphone access to play your input. Switch on Sidetone in the list that opens.",
+					isWarning: true,
+					settings: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
+				)
+			}
 			if let message = model.statusMessage {
 				notice(message, isWarning: true)
 			}
@@ -193,7 +200,7 @@ struct MonitorPanel: View {
 	/// Names the panel's shape: everything that can appear or disappear and so change
 	/// how tall the panel is.
 	private var layout: String {
-		"\(model.isRunning)|\(model.statusMessage ?? "")|\(model.feedbackRisk?.message ?? "")"
+		"\(model.isRunning)|\(model.microphoneDenied)|\(model.statusMessage ?? "")|\(model.feedbackRisk?.message ?? "")"
 	}
 
 	private var header: some View {
@@ -414,13 +421,22 @@ struct MonitorPanel: View {
 		.font(.callout)
 	}
 
-	private func notice(_ message: String, isWarning: Bool) -> some View {
+	private func notice(_ message: String, isWarning: Bool, settings: URL? = nil) -> some View {
 		HStack(alignment: .top, spacing: 6) {
 			Image(systemName: isWarning ? "exclamationmark.triangle.fill" : "info.circle.fill")
 				.foregroundStyle(isWarning ? Theme.warning : Theme.accent)
-			Text(message)
-				.font(.caption)
-				.fixedSize(horizontal: false, vertical: true)
+			VStack(alignment: .leading, spacing: 6) {
+				Text(message)
+					.font(.caption)
+					.fixedSize(horizontal: false, vertical: true)
+				if let settings {
+					Button("Open Settings") {
+						MenuBarPanel.dismiss()
+						NSWorkspace.shared.open(settings)
+					}
+					.controlSize(.small)
+				}
+			}
 		}
 		.padding(8)
 		.frame(maxWidth: .infinity, alignment: .leading)

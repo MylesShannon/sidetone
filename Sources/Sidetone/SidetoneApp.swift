@@ -9,7 +9,7 @@ struct SidetoneApp: App {
 			MonitorPanel(model: model)
 		} label: {
 			Image(systemName: menuBarSymbol)
-				.accessibilityLabel(model.isRunning ? "Sidetone, monitoring" : "Sidetone, stopped")
+				.accessibilityLabel(accessibilityLabel)
 		}
 		.menuBarExtraStyle(.window)
 
@@ -20,7 +20,13 @@ struct SidetoneApp: App {
 		.defaultPosition(.center)
 	}
 
+	private var accessibilityLabel: String {
+		if model.microphoneDenied { return "Sidetone, needs microphone access" }
+		return model.isRunning ? "Sidetone, monitoring" : "Sidetone, stopped"
+	}
+
 	private var menuBarSymbol: String {
+		if model.microphoneDenied { return "exclamationmark.triangle" }
 		if case .failed = model.engine.state, !model.failureSeen { return "exclamationmark.triangle" }
 		guard model.isRunning else { return "waveform" }
 		return model.settings.data.muted ? "waveform.slash" : "waveform.circle.fill"

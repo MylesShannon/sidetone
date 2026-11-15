@@ -34,6 +34,8 @@ final class AppModel {
 	@ObservationIgnored private var isStarting = false
 	@ObservationIgnored private var latencyStepUps = 0
 	@ObservationIgnored private var meterTimer: Timer?
+	@ObservationIgnored private var microphoneTimer: Timer?
+	@ObservationIgnored private var startWhenMicrophoneAllowed = false
 	@ObservationIgnored private var toggleHotKeyID: UInt32?
 	@ObservationIgnored private var pushToMuteHotKeyID: UInt32?
 	@ObservationIgnored private var pushToMuteWasMuted = false
@@ -75,6 +77,9 @@ final class AppModel {
 		observeSleep()
 		observeDisplayChanges()
 		Self.askAboutNotifications()
+		if Self.microphoneRefused {
+			waitForMicrophone(thenStart: false)
+		}
 
 		if settings.data.startMonitoringOnLaunch {
 			start()
@@ -176,6 +181,8 @@ final class AppModel {
 		}
 		screenObserver = nil
 		stopMeterTimer()
+		microphoneTimer?.invalidate()
+		microphoneTimer = nil
 		HotKeyCenter.shared.unregisterAll()
 		toggleHotKeyID = nil
 		pushToMuteHotKeyID = nil
@@ -223,11 +230,9 @@ final class AppModel {
 		Task { @MainActor in
 			defer { isStarting = false }
 			guard await Self.microphoneAccess() else {
-				microphoneDenied = true
-				statusMessage = "Sidetone needs microphone access in System Settings"
+				waitForMicrophone(thenStart: true)
 				return
 			}
-			microphoneDenied = false
 			launch(input: input, output: output, automatic: automatic)
 		}
 	}
@@ -562,6 +567,30 @@ final class AppModel {
 	private func stopMeterTimer() {
 		meterTimer?.invalidate()
 		meterTimer = nil
+	}
+
+	/// macOS says nothing when microphone access is switched on in System Settings, so
+	/// this looks every two seconds until it is, then picks up a start that was refused.
+	private func waitForMicrophone(thenStart: Bool) {
+		microphoneDenied = true
+		startWhenMicrophoneAllowed = startWhenMicrophoneAllowed || thenStart
+		guard microphoneTimer == nil else { return }
+		microphoneTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+			MainActor.assumeIsolated {
+				guard let self, !Self.microphoneRefused else { return }
+				self.microphoneTimer?.invalidate()
+				self.microphoneTimer = nil
+				self.microphoneDenied = false
+				if self.startWhenMicrophoneAllowed {
+					self.startWhenMicrophoneAllowed = false
+					self.start(automatic: true)
+				}
+			}
+		}
+	}
+
+	private static var microphoneRefused: Bool {
+		[.denied, .restricted].contains(AVCaptureDevice.authorizationStatus(for: .audio))
 	}
 
 	private static func microphoneAccess() async -> Bool {
