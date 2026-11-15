@@ -1,3 +1,4 @@
+import AppKit
 import AppServices
 import AudioCore
 import SwiftUI
@@ -28,6 +29,13 @@ struct SettingsView: View {
 		// preference windows have always behaved, so a short pane is not mostly empty.
 		.frame(width: 640)
 		.frame(minHeight: 200)
+		// While Settings is open Sidetone is an ordinary app, with a Dock icon and the standard menus that make ⌘W and
+		// the editing keys work.
+		.onAppear {
+			NSApp.setActivationPolicy(.regular)
+			NSApp.activate()
+		}
+		.onDisappear { NSApp.setActivationPolicy(.accessory) }
 	}
 }
 
@@ -35,6 +43,7 @@ private struct GeneralSettings: View {
 	@Bindable var model: AppModel
 	@State private var launchAtLogin = LoginItem.isEnabled
 	@State private var loginError: String?
+	@State private var needsApproval = LoginItem.requiresApproval
 
 	var body: some View {
 		Form {
@@ -67,7 +76,7 @@ private struct GeneralSettings: View {
 				set: { model.setChecksForUpdates($0) }
 			)) {
 				Text("Check for updates automatically")
-				Text("Sidetone asks for permission before installing anything.")
+				Text("Sidetone asks before installing anything.")
 			}
 
 			LabeledContent("Updates") {
@@ -75,7 +84,7 @@ private struct GeneralSettings: View {
 					.disabled(!model.updater.canCheck)
 			}
 
-			if LoginItem.requiresApproval {
+			if needsApproval {
 				LabeledContent {
 					Button("Open Login Items Settings") { LoginItem.openSystemSettings() }
 				} label: {
@@ -88,6 +97,12 @@ private struct GeneralSettings: View {
 			}
 		}
 		.formStyle(.grouped)
+		.task {
+			while !Task.isCancelled {
+				needsApproval = LoginItem.requiresApproval
+				try? await Task.sleep(for: .seconds(2))
+			}
+		}
 	}
 }
 
