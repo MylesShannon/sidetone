@@ -15,7 +15,7 @@ enum MoveToApplications {
 	static func offer() -> Bool {
 		let alert = NSAlert()
 		alert.messageText = "Move Sidetone to Applications?"
-		alert.informativeText = "Sidetone opens at login and updates itself from the Applications folder."
+		alert.informativeText = "Open Sidetone at login and updates only work when Sidetone is in the Applications folder."
 		alert.addButton(withTitle: "Move to Applications")
 		alert.addButton(withTitle: "Not Now")
 		NSApp.activate(ignoringOtherApps: true)
