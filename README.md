@@ -84,6 +84,8 @@ panel opens Settings, and so does opening Sidetone again while it's running.
   appear.
 - The menu bar icon fills in while monitoring, shows a slash while muted, and
   turns into a warning triangle when monitoring fails or the microphone is off.
+- If macOS needs your approval before Sidetone can open at login, Settings says so
+  under **General**, and **Open Login Items Settings** takes you there.
 - Sidetone checks for new versions and offers to install them. It asks first, and
   you can turn off **Check for updates automatically** in Settings.
 

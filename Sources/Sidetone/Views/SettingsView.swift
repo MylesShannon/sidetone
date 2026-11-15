@@ -76,8 +76,11 @@ private struct GeneralSettings: View {
 			}
 
 			if LoginItem.requiresApproval {
-				LabeledContent("Login item") {
-					Button("Open Login Items settings") { LoginItem.openSystemSettings() }
+				LabeledContent {
+					Button("Open Login Items Settings") { LoginItem.openSystemSettings() }
+				} label: {
+					Text("Login item")
+					Text("macOS needs your approval in Login Items before Sidetone can open at login.")
 				}
 			}
 			if let loginError {
