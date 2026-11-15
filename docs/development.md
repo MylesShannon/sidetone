@@ -7,7 +7,7 @@ Needs a Swift 6 toolchain, from either Xcode or the Command Line Tools.
 | `./build.sh`                      | Build and sign `build/Sidetone.app` (git ignores `build/`)  |
 | `./install.sh`                    | Build, put it in `/Applications` and open it                |
 | `./install.sh path/Sidetone.app`  | Install a release's app after checking its signature        |
-| `./uninstall.sh`                  | Remove it and its microphone access                         |
+| `./uninstall.sh`                  | Remove it, its login item and its microphone access         |
 | `./publish.sh notes.md`           | Check, build, notarize and publish a release                |
 
 Run the scripts as yourself, not with sudo. `uninstall.sh` takes

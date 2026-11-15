@@ -1,4 +1,10 @@
 import AppKit
+import ServiceManagement
+
+if CommandLine.arguments.dropFirst().first == "unregister" {
+	try? SMAppService.mainApp.unregister()
+	exit(0)
+}
 
 // A second copy, such as one opened from the DMG while the installed one runs, brings the first forward and quits.
 if let id = Bundle.main.bundleIdentifier,

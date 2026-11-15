@@ -138,8 +138,9 @@ Then quit Sidetone and drag it from Applications to the Trash. Its settings and
 presets stay, so a reinstall picks up where you left off. To remove them too, run
 `defaults delete com.mshannon.sidetone`.
 
-If you built it from source, `./uninstall.sh` removes the app and resets its
-microphone access. Add `--delete-settings` to remove its settings and presets too.
+If you built it from source, `./uninstall.sh` switches off **Open Sidetone at
+login**, removes the app and resets its microphone access. Add `--delete-settings`
+to remove its settings and presets too.
 
 ## Credits and license
 

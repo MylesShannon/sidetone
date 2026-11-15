@@ -14,6 +14,9 @@ cd "$HERE"
 ID=com.mshannon.sidetone
 INSTALLED="/Applications/Sidetone.app"
 
+if [ "$mode" != permissions ] && [ -x "$INSTALLED/Contents/MacOS/Sidetone" ]; then
+  "$INSTALLED/Contents/MacOS/Sidetone" unregister
+fi
 pkill -x Sidetone || true
 for _ in $(seq 1 10); do
   pgrep -x Sidetone >/dev/null || break
