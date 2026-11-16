@@ -98,15 +98,15 @@ own dialog, downloads, verifies, installs, and relaunches. `Resources/Info.plist
 carries `SUFeedURL` and `SUPublicEDKey`.
 
 The private half of that key pair lives in the login keychain of the Mac that
-publishes, put there by Sparkle's `generate_keys`. **Back it up.** Without it no
-future release can be signed, and installs already in the wild have no way to
-update.
+publishes, put there by Sparkle's `generate_keys --account sidetone`. **Back it
+up.** Without it no future release can be signed, and installs already in the wild
+have no way to update.
 
 `publish.sh` reads the key with `security find-generic-password` into its temporary
 folder and passes it to `generate_appcast` with `--ed-key-file`, because over SSH
 neither Sparkle tool can show the dialog that asks for the keychain. Once on each
 Mac that publishes, at its own Terminal, run
-`security find-generic-password -s https://sparkle-project.org -a ed25519 -w >/dev/null`,
+`security find-generic-password -s https://sparkle-project.org -a sidetone -w >/dev/null`,
 enter the login password and click **Always Allow**, so `security` can read the key
 without asking. Sparkle updates don't undo that.
 

@@ -79,7 +79,7 @@ echo "Signing the appcast..."
 SPARKLE=.build-arm64/artifacts/sparkle/Sparkle/bin
 # The Sparkle key trusts /usr/bin/security, which Sparkle updates don't change, so SSH can read it without a dialog.
 mkdir -p .build
-if ! key=$(security find-generic-password -s https://sparkle-project.org -a ed25519 -w 2> .build/sparkle-key.log); then
+if ! key=$(security find-generic-password -s https://sparkle-project.org -a sidetone -w 2> .build/sparkle-key.log); then
   cat .build/sparkle-key.log >&2
   echo "Reading the Sparkle key from your login Keychain failed, so nothing was published. Unlock the Keychain with: security unlock-keychain. If it was unlocked, allow /usr/bin/security once at the Mac's own Terminal, as docs/development.md says." >&2
   exit 1
