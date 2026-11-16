@@ -77,13 +77,15 @@ cp "$DMG" "$work/releases/"
 cp "$UPDATE_NOTES" "$work/releases/Sidetone-$VERSION.html"
 echo "Signing the appcast..."
 SPARKLE=.build-arm64/artifacts/sparkle/Sparkle/bin
-# generate_keys may read the key it stored without asking, while generate_appcast would need a dialog, which SSH can't show.
+# The Sparkle key trusts /usr/bin/security, which Sparkle updates don't change, so SSH can read it without a dialog.
 mkdir -p .build
-if ! "$SPARKLE/generate_keys" -x "$work/sparkle-key" > .build/generate_keys.log 2>&1; then
-  tail -n 30 .build/generate_keys.log >&2
-  echo "Exporting the Sparkle key from your login Keychain failed, so nothing was published. Unlock the Keychain with: security unlock-keychain" >&2
+if ! key=$(security find-generic-password -s https://sparkle-project.org -a ed25519 -w 2> .build/sparkle-key.log); then
+  cat .build/sparkle-key.log >&2
+  echo "Reading the Sparkle key from your login Keychain failed, so nothing was published. Unlock the Keychain with: security unlock-keychain. If it was unlocked, allow /usr/bin/security once at the Mac's own Terminal, as docs/development.md says." >&2
   exit 1
 fi
+printf '%s' "$key" > "$work/sparkle-key"
+unset key
 "$SPARKLE/generate_appcast" --ed-key-file "$work/sparkle-key" \
   --download-url-prefix "https://github.com/$REPO/releases/download/$TAG/" -o docs/appcast.xml "$work/releases"
 rm -f "$work/sparkle-key"
