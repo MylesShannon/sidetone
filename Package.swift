@@ -5,7 +5,7 @@ let package = Package(
 	name: "Sidetone",
 	platforms: [.macOS(.v15)],
 	dependencies: [
-		.package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0"),
+		.package(url: "https://github.com/sparkle-project/Sparkle", from: "2.10.1"),
 	],
 	targets: [
 		.target(name: "AudioDevices"),
