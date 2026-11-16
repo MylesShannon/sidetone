@@ -8,7 +8,7 @@ struct SidetoneApp: App {
 		MenuBarExtra {
 			MonitorPanel(model: model)
 		} label: {
-			MenuBarLabel(symbol: menuBarSymbol, accessibilityLabel: accessibilityLabel)
+			MenuBarLabel(symbol: menuBarSymbol, attention: attention, accessibilityLabel: accessibilityLabel)
 		}
 		.menuBarExtraStyle(.window)
 
@@ -19,14 +19,18 @@ struct SidetoneApp: App {
 		.defaultPosition(.center)
 	}
 
+	private var attention: String? {
+		if model.microphoneDenied { return "microphone access is off" }
+		if case .failed = model.engine.state, !model.failureSeen { return "monitoring stopped" }
+		return nil
+	}
+
 	private var accessibilityLabel: String {
-		if model.microphoneDenied { return "Sidetone, needs microphone access" }
+		if let attention { return "Sidetone, needs attention: \(attention)" }
 		return model.isRunning ? "Sidetone, monitoring" : "Sidetone, stopped"
 	}
 
 	private var menuBarSymbol: String {
-		if model.microphoneDenied { return "exclamationmark.triangle" }
-		if case .failed = model.engine.state, !model.failureSeen { return "exclamationmark.triangle" }
 		guard model.isRunning else { return "waveform" }
 		return model.settings.data.muted ? "waveform.slash" : "waveform.circle.fill"
 	}
@@ -36,15 +40,47 @@ struct SidetoneApp: App {
 /// lives as long as the app and can reach `openWindow`.
 private struct MenuBarLabel: View {
 	let symbol: String
+	let attention: String?
 	let accessibilityLabel: String
 	@Environment(\.openWindow) private var openWindow
+	@Environment(\.colorScheme) private var colorScheme
 
 	var body: some View {
-		Image(systemName: symbol)
+		icon
 			.accessibilityLabel(accessibilityLabel)
 			.onReceive(NotificationCenter.default.publisher(for: AppDelegate.reopened)) { _ in
 				openWindow(id: SidetoneWindow.settings)
 				NSApp.activate(ignoringOtherApps: true)
 			}
+	}
+
+	@ViewBuilder private var icon: some View {
+		if attention != nil, let glyph = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) {
+			Image(nsImage: Self.attentionIcon(glyph)).id(colorScheme)
+		} else {
+			Image(systemName: symbol)
+		}
+	}
+
+	static func attentionIcon(_ glyph: NSImage) -> NSImage {
+		let side: CGFloat = 18, gap: CGFloat = 8, dot: CGFloat = 6
+		let image = NSImage(size: NSSize(width: side, height: side), flipped: true) { _ in
+			let s = glyph.size
+			let tinted = NSImage(size: s, flipped: false) { rect in
+				glyph.draw(in: rect)
+				NSColor.labelColor.set()
+				rect.fill(using: .sourceAtop)
+				return true
+			}
+			tinted.draw(in: NSRect(x: (side - s.width) / 2, y: (side - s.height) / 2, width: s.width, height: s.height))
+			NSGraphicsContext.current?.compositingOperation = .clear
+			NSBezierPath(ovalIn: NSRect(x: side - gap, y: 0, width: gap, height: gap)).fill()
+			NSGraphicsContext.current?.compositingOperation = .sourceOver
+			NSColor.systemRed.setFill()
+			NSBezierPath(ovalIn: NSRect(x: side - gap + (gap - dot) / 2, y: (gap - dot) / 2, width: dot, height: dot)).fill()
+			return true
+		}
+		image.isTemplate = false
+		return image
 	}
 }

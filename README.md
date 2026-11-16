@@ -83,7 +83,8 @@ panel opens Settings, and so does opening Sidetone again while it's running.
   plugged in** under **General** and it also starts on its own when your devices
   appear.
 - The menu bar icon fills in while monitoring, shows a slash while muted, and
-  turns into a warning triangle when monitoring fails or the microphone is off.
+  gets a red dot when monitoring stops on its own or the microphone is off. The
+  dot goes away once you open the panel and see why monitoring stopped.
 - If macOS needs your approval before Sidetone can open at login, Settings says so
   under **General**, and **Open Login Items Settings** takes you there.
 - Sidetone checks for new versions and offers to install them. It asks first, and
