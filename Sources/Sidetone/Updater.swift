@@ -10,12 +10,13 @@ import Sparkle
 @MainActor
 final class Updater {
 	private let controller: SPUStandardUpdaterController
+	private let alerts = UpdateAlerts()
 
 	init(checksAutomatically: Bool) {
 		controller = SPUStandardUpdaterController(
 			startingUpdater: true,
 			updaterDelegate: nil,
-			userDriverDelegate: nil
+			userDriverDelegate: alerts
 		)
 		controller.updater.automaticallyChecksForUpdates = checksAutomatically
 	}
