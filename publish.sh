@@ -108,4 +108,5 @@ if ! gh release create "$TAG" "$DMG" --repo "$REPO" --title "Sidetone $VERSION" 
 fi
 
 echo "Published Sidetone $VERSION."
+echo "It's at https://github.com/$REPO/releases/tag/$TAG."
 echo "Pages serves the new appcast within a few minutes, and then Sparkle offers the update."
