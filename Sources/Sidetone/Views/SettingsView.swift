@@ -31,11 +31,8 @@ struct SettingsView: View {
 		.frame(minHeight: 200)
 		// While Settings is open Sidetone is an ordinary app, with a Dock icon and the standard menus that make ⌘W and
 		// the editing keys work.
-		.onAppear {
-			NSApp.setActivationPolicy(.regular)
-			NSApp.activate()
-		}
-		.onDisappear { NSApp.setActivationPolicy(.accessory) }
+		.onAppear { DockIcon.show(for: "settings") }
+		.onDisappear { DockIcon.hide(for: "settings") }
 	}
 }
 

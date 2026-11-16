@@ -97,6 +97,13 @@ Sparkle handles updates: it reads `docs/appcast.xml`, compares versions, shows i
 own dialog, downloads, verifies, installs, and relaunches. `Resources/Info.plist`
 carries `SUFeedURL` and `SUPublicEDKey`.
 
+Sidetone has no Dock icon, so Sparkle would open the update window it finds behind
+other apps. `UpdateAlerts`, Sparkle's user driver delegate, gives Sidetone a Dock
+icon and brings it to the front while the window is open, and sets
+`supportsGentleScheduledUpdateReminders`, which Sparkle expects from apps without
+one. Settings shows the Dock icon the same way, through `DockIcon`, so closing one
+window leaves the icon while the other is still open.
+
 The private half of that key pair lives in the login keychain of the Mac that
 publishes, put there by Sparkle's `generate_keys --account sidetone`. **Back it
 up.** Without it no future release can be signed, and installs already in the wild
