@@ -12,6 +12,9 @@ REPO=MylesShannon/sidetone
 NOTARY_PROFILE=${NOTARY_PROFILE:-notary}
 
 [ -n "${SIDETONE_SIGN:-}" ] || { echo "Set SIDETONE_SIGN to the command that signs release builds. See docs/development.md." >&2; exit 1; }
+# Over SSH, macOS leaves Homebrew's folders off PATH.
+command -v gh >/dev/null || PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+command -v gh >/dev/null || { echo "The GitHub CLI isn't installed. Install it with: brew install gh" >&2; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "Sign in to GitHub first: gh auth login" >&2; exit 1; }
 [ "$(git branch --show-current)" = main ] || { echo "Switch to main first." >&2; exit 1; }
 [ -z "$(git status --porcelain)" ] || { echo "Commit or remove your changes first. Keep the notes outside the repo or in build/." >&2; exit 1; }
