@@ -3,6 +3,20 @@
     <channel>
         <title>Sidetone</title>
         <item>
+            <title>1.2.2</title>
+            <pubDate>Mon, 16 Nov 2026 17:43:49 -0500</pubDate>
+            <sparkle:version>1.2.2</sparkle:version>
+            <sparkle:shortVersionString>1.2.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Sidetone 1.2.2</h2>
+<p>Updates you can see.</p>
+<ul>
+	<li>When Sidetone finds an update on its own, the update window now comes to the front, with Sidetone in the Dock until you close it. Before, it could open behind your other windows and go unnoticed.</li>
+</ul>
+]]></description>
+            <enclosure url="https://github.com/MylesShannon/sidetone/releases/download/v1.2.2/Sidetone-1.2.2.dmg" length="3870772" type="application/octet-stream" sparkle:edSignature="YkdQGPcb5lTwL+veaAJr6JW5KW73EiUydxXWwScxMvArkkydUPhC7j5vEsdTrELgNH7rzETW6rXPsJNjqWlwCA=="/>
+        </item>
+        <item>
             <title>1.2.1</title>
             <pubDate>Mon, 16 Nov 2026 16:51:33 -0500</pubDate>
             <sparkle:version>1.2.1</sparkle:version>
@@ -34,21 +48,6 @@
 </ul>
 ]]></description>
             <enclosure url="https://github.com/MylesShannon/sidetone/releases/download/v1.2.0/Sidetone-1.2.0.dmg" length="3872249" type="application/octet-stream" sparkle:edSignature="dpqNQ4ci0MPb8rAag/m3KntRINzhz0WlCu9EPNuvCTwbIe2JKvvkQGS2iMjgV6e6TZLc9IAnlO0IPea8R/60CQ=="/>
-        </item>
-        <item>
-            <title>1.1.4</title>
-            <pubDate>Sat, 14 Nov 2026 15:10:57 -0500</pubDate>
-            <sparkle:version>1.1.4</sparkle:version>
-            <sparkle:shortVersionString>1.1.4</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Sidetone 1.1.4</h2>
-<p>Signed and notarized by Apple.</p>
-<ul>
-	<li>Sidetone now carries a Developer ID signature and Apple's notarization, so a downloaded copy opens like any other app, with no stop in Privacy &amp; Security first.</li>
-	<li>Because the signature changed, macOS asks for the microphone once more the first time you start monitoring. If Sidetone stops opening at login, turn on Open Sidetone at login in Settings again.</li>
-</ul>
-]]></description>
-            <enclosure url="https://github.com/MylesShannon/sidetone/releases/download/v1.1.4/Sidetone-1.1.4.dmg" length="3831880" type="application/octet-stream" sparkle:edSignature="TqMwEV6yiLYIAIF02HT4z3MSZi7y1BWqK4Z2C0axb7nKGURaB0KuVner//iUwAog//CKICUTwnxnKkFbhC+PDA=="/>
         </item>
     </channel>
 </rss>
