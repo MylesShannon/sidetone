@@ -3,6 +3,20 @@
     <channel>
         <title>Sidetone</title>
         <item>
+            <title>1.2.1</title>
+            <pubDate>Mon, 16 Nov 2026 16:51:33 -0500</pubDate>
+            <sparkle:version>1.2.1</sparkle:version>
+            <sparkle:shortVersionString>1.2.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Sidetone 1.2.1</h2>
+<p>A safer updater.</p>
+<ul>
+	<li>Sidetone's updater, Sparkle, moves to version 2.10.1, which fixes security problems in how it installs updates. Nothing else changes.</li>
+</ul>
+]]></description>
+            <enclosure url="https://github.com/MylesShannon/sidetone/releases/download/v1.2.1/Sidetone-1.2.1.dmg" length="3864294" type="application/octet-stream" sparkle:edSignature="0yultGdnYTCmW9Bwxi/bm3fumZ/wsTEANGnNQWpykgh/Ofm+p7pr/d4YNQuQtbWcXIHaTNyFAXG7ussFZqrSBg=="/>
+        </item>
+        <item>
             <title>1.2.0</title>
             <pubDate>Mon, 16 Nov 2026 14:08:10 -0500</pubDate>
             <sparkle:version>1.2.0</sparkle:version>
